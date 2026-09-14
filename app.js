@@ -1,5 +1,5 @@
 'use strict';
-const APP_VERSION = '0.4.0', KEY = 'gartenakte_data', OLD_KEYS = ['gartenakte_1_0_0_data'];
+const APP_VERSION = '0.5.0', KEY = 'gartenakte_data', OLD_KEYS = ['gartenakte_1_0_0_data'];
 let db = load();
 function fresh() { return { schema: 2, appVersion: APP_VERSION, people: [], addresses: [], personAddresses: [], ways: [], plots: [], landParcels: [], plotLandParcels: [], lessors: [], landContracts: [], contractParcels: [], leases: [], cases: [], events: [], attachments: [] }; }
 function migrate(x) {
@@ -60,8 +60,54 @@ function activeAddressForPerson(personId, date = today()) { const rel = db.perso
 function addEvent(caseId, type, text, fromPersonId = '', toPersonId = '') { db.events.unshift({ id: uid(), caseId, at: now(), type, text, fromPersonId, toPersonId }); }
 function isOpen(c) { return c.status !== 'Abgeschlossen'; }
 function isOverdue(c) { return isOpen(c) && c.deadline && c.deadline < today(); }
-function tab(name) { document.querySelectorAll('main section').forEach(s => s.classList.toggle('hidden', s.id !== name)); document.querySelectorAll('nav button').forEach(b => b.classList.toggle('active', b.dataset.tab === name)); }
-document.querySelectorAll('nav button').forEach(b => b.onclick = () => tab(b.dataset.tab));
+function closeMenu() {
+  const drawer = document.getElementById('appDrawer');
+  const backdrop = document.getElementById('drawerBackdrop');
+  const menuButton = document.getElementById('menuBtn');
+  drawer?.classList.remove('open');
+  backdrop?.classList.remove('open');
+  drawer?.setAttribute('aria-hidden', 'true');
+  backdrop?.setAttribute('aria-hidden', 'true');
+  menuButton?.setAttribute('aria-expanded', 'false');
+  document.body.classList.remove('menu-open');
+}
+
+function openMenu() {
+  const drawer = document.getElementById('appDrawer');
+  const backdrop = document.getElementById('drawerBackdrop');
+  const menuButton = document.getElementById('menuBtn');
+  drawer?.classList.add('open');
+  backdrop?.classList.add('open');
+  drawer?.setAttribute('aria-hidden', 'false');
+  backdrop?.setAttribute('aria-hidden', 'false');
+  menuButton?.setAttribute('aria-expanded', 'true');
+  document.body.classList.add('menu-open');
+}
+
+function tab(name) {
+  document.querySelectorAll('main section').forEach(section => {
+    section.classList.toggle('hidden', section.id !== name);
+  });
+
+  document.querySelectorAll('[data-tab]').forEach(button => {
+    button.classList.toggle('active', button.dataset.tab === name);
+  });
+
+  closeMenu();
+}
+
+document.querySelectorAll('[data-tab]').forEach(button => {
+  button.addEventListener('click', () => tab(button.dataset.tab));
+});
+
+document.getElementById('menuBtn')?.addEventListener('click', openMenu);
+document.getElementById('drawerCloseBtn')?.addEventListener('click', closeMenu);
+document.getElementById('drawerBackdrop')?.addEventListener('click', closeMenu);
+document.addEventListener('keydown', event => {
+  if (event.key === 'Escape') {
+    closeMenu();
+  }
+});
 function opts(items, sel, label) { return '<option value="">– keine –</option>' + items.map(x => `<option value="${x.id}" ${x.id === sel ? 'selected' : ''}>${esc(label(x))}</option>`).join(''); }
 function personOptions(sel = '') { return opts(db.people, sel, p => personName(p.id)); }
 function plotOptions(sel = '') { return opts(db.plots, sel, p => plotName(p.id)); }
@@ -77,7 +123,59 @@ function renderPlots() { document.querySelector('#plots').innerHTML = `<div clas
 function renderLand() { document.querySelector('#land').innerHTML = `<div class="actions"><button class="primary" onclick="editLandParcel()">+ Flurstück</button><button onclick="editLessor()">+ Verpächter</button><button onclick="editLandContract()">+ Pachtvertrag</button><button onclick="editContractParcel()">+ Vertrag ↔ Flurstück</button></div><div class="card wide"><h2>Flurstücke</h2><table><thead><tr><th>Bezeichnung</th><th>Größe</th><th>Parzellen</th><th></th></tr></thead><tbody>${db.landParcels.map(f => `<tr><td><b>${esc(landParcelName(f.id))}</b></td><td>${esc(f.area ? f.area + ' m²' : '–')}</td><td>${db.plotLandParcels.filter(r => r.landParcelId === f.id).map(r => esc(plotName(r.plotId))).join(', ') || '–'}</td><td><button onclick="editLandParcel('${f.id}')">Bearbeiten</button></td></tr>`).join('') || '<tr><td colspan="4" class="muted">Noch keine Flurstücke.</td></tr>'}</tbody></table></div><div class="grid" style="margin-top:14px"><div class="card wide"><h2>Verpächter</h2><table><thead><tr><th>Name</th><th>Kontakt/Notiz</th><th></th></tr></thead><tbody>${db.lessors.map(l => `<tr><td><b>${esc(l.name)}</b></td><td>${esc(l.contact || l.note || '')}</td><td><button onclick="editLessor('${l.id}')">Bearbeiten</button></td></tr>`).join('') || '<tr><td colspan="3" class="muted">Noch keine Verpächter.</td></tr>'}</tbody></table></div><div class="card wide"><h2>Flächen-Pachtverträge</h2><table><thead><tr><th>Vertrag</th><th>Laufzeit</th><th>Flurstücke</th><th>Anhang</th><th></th></tr></thead><tbody>${db.landContracts.map(c => `<tr><td><b>${esc(contractName(c.id))}</b></td><td>${esc(c.start || '–')} – ${esc(c.end || 'offen')}</td><td>${db.contractParcels.filter(r => r.contractId === c.id).map(r => esc(landParcelName(r.landParcelId))).join('<br>') || '–'}</td><td>${c.documentName ? '<span class="badge">' + esc(c.documentName) + '</span>' : '–'}</td><td><button onclick="editLandContract('${c.id}')">Bearbeiten</button></td></tr>`).join('') || '<tr><td colspan="5" class="muted">Noch keine Verträge.</td></tr>'}</tbody></table></div></div>`; }
 function renderLeases() { document.querySelector('#leases').innerHTML = `<div class="actions"><button class="primary" onclick="editLease()">+ Pachtverhältnis</button></div><div class="card wide"><table><thead><tr><th>Parzelle</th><th>Person</th><th>Beginn</th><th>Ende</th><th>Status</th><th></th></tr></thead><tbody>${db.leases.map(l => `<tr><td>${esc(plotName(l.plotId))}</td><td>${esc(personName(l.personId))}</td><td>${esc(l.start || '–')}</td><td>${esc(l.end || '–')}</td><td><span class="badge">${!l.end || l.end >= today() ? 'aktiv' : 'beendet'}</span></td><td><button onclick="editLease('${l.id}')">Bearbeiten</button></td></tr>`).join('') || '<tr><td colspan="6" class="muted">Noch keine Pachtverhältnisse.</td></tr>'}</tbody></table></div>`; }
 function renderCases() { document.querySelector('#cases').innerHTML = `<div class="actions"><button class="primary" onclick="editCase()">+ Vorgang</button></div><div class="card wide">${caseTable(db.cases, true)}</div>`; }
-function caseTable(items, actions) { const s = [...items].sort((a, b) => (isOverdue(b) - isOverdue(a)) || String(a.deadline || '9999').localeCompare(String(b.deadline || '9999'))); return `<table><thead><tr><th>Art</th><th>Ursprung</th><th>Aktuell verantwortlich</th><th>Status</th><th>Frist</th><th>Anhänge</th>${actions ? '<th></th>' : ''}</tr></thead><tbody>${s.map(c => `<tr><td><b>${esc(c.category)}</b><br>${esc(c.description)}</td><td>${esc([c.plotId && plotName(c.plotId), c.originPersonId && personName(c.originPersonId)].filter(Boolean).join(' · ') || '–')}</td><td>${esc(c.responsiblePersonId ? personName(c.responsiblePersonId) : (c.responsibleType === 'Verein' ? 'Verein' : '–'))}</td><td><span class="badge">${esc(c.status)}</span></td><td class="${isOverdue(c) ? 'overdue' : ''}">${esc(c.deadline || '–')}</td><td>${db.attachments.filter(a => a.caseId === c.id).length}</td>${actions ? `<td><button onclick="editCase('${c.id}')">Öffnen</button></td>` : ''}</tr>`).join('') || `<tr><td colspan="${actions ? 7 : 6}" class="muted">Keine Vorgänge.</td></tr>`}</tbody></table>`; }
+function caseTable(items, actions) {
+  const sorted = [...items].sort((a, b) =>
+    (isOverdue(b) - isOverdue(a)) ||
+    String(a.deadline || '9999').localeCompare(String(b.deadline || '9999'))
+  );
+
+  const rows = sorted.map(c => {
+    const origin = [
+      c.plotId && plotName(c.plotId),
+      c.originPersonId && personName(c.originPersonId)
+    ].filter(Boolean).join(' · ') || '–';
+
+    const responsible = c.responsiblePersonId
+      ? personName(c.responsiblePersonId)
+      : (c.responsibleType === 'Verein' ? 'Verein' : '–');
+
+    const attachmentCount = db.attachments.filter(a => a.caseId === c.id).length;
+
+    return `
+      <tr>
+        <td data-label="Art">
+          <b>${esc(c.category)}</b><br>
+          ${esc(c.description)}
+        </td>
+        <td data-label="Ursprung">${esc(origin)}</td>
+        <td data-label="Verantwortlich">${esc(responsible)}</td>
+        <td data-label="Status"><span class="badge">${esc(c.status)}</span></td>
+        <td data-label="Frist" class="${isOverdue(c) ? 'overdue' : ''}">${esc(c.deadline || '–')}</td>
+        <td data-label="Anhänge">${attachmentCount}</td>
+        ${actions ? `<td data-label="Aktion"><button onclick="editCase('${c.id}')">Öffnen</button></td>` : ''}
+      </tr>
+    `;
+  }).join('');
+
+  return `
+    <table class="case-table">
+      <thead>
+        <tr>
+          <th>Art</th>
+          <th>Ursprung</th>
+          <th>Aktuell verantwortlich</th>
+          <th>Status</th>
+          <th>Frist</th>
+          <th>Anhänge</th>
+          ${actions ? '<th></th>' : ''}
+        </tr>
+      </thead>
+      <tbody>
+        ${rows || `<tr class="empty-row"><td colspan="${actions ? 7 : 6}" class="muted">Keine Vorgänge.</td></tr>`}
+      </tbody>
+    </table>
+  `;
+}
 function showDialog(title, html) { dlgTitle.textContent = title; dlgBody.innerHTML = html; dlg.showModal(); }
 function editPerson(id) { const p = byId(db.people, id) || { id: '', firstName: '', lastName: '', memberNo: '', email: '', phone: '', note: '' }; showDialog(p.id ? 'Person bearbeiten' : 'Person anlegen', `<form id="fp" class="formgrid"><label>Vorname<input name="firstName" value="${esc(p.firstName)}"></label><label>Nachname<input name="lastName" required value="${esc(p.lastName)}"></label><label>Mitgliedsnummer<input name="memberNo" value="${esc(p.memberNo)}"></label><label>Telefon<input name="phone" value="${esc(p.phone)}"></label><label class="full">E-Mail<input type="email" name="email" value="${esc(p.email)}"></label><label class="full">Interne Notiz<textarea name="note">${esc(p.note)}</textarea></label><div class="full actions"><button class="primary">Speichern</button><button type="button" onclick="dlg.close()">Abbrechen</button></div></form>`); fp.onsubmit = e => { e.preventDefault(); const f = new FormData(e.target), o = { id: p.id || uid(), firstName: f.get('firstName').trim(), lastName: f.get('lastName').trim(), memberNo: f.get('memberNo').trim(), phone: f.get('phone').trim(), email: f.get('email').trim(), note: f.get('note').trim() }; p.id ? Object.assign(p, o) : db.people.push(o); save(); dlg.close(); }; }
 function editAddress(id) { const a = byId(db.addresses, id) || { id: '', street: '', zip: '', city: '', country: 'Deutschland', note: '' }; showDialog(a.id ? 'Adresse bearbeiten' : 'Adresse anlegen', `<form id="fa" class="formgrid"><label class="full">Straße / Hausnummer<input name="street" required value="${esc(a.street)}"></label><label>PLZ<input name="zip" value="${esc(a.zip)}"></label><label>Ort<input name="city" required value="${esc(a.city)}"></label><label>Land<input name="country" value="${esc(a.country)}"></label><label class="full">Notiz<textarea name="note">${esc(a.note)}</textarea></label><div class="full actions"><button class="primary">Speichern</button><button type="button" onclick="dlg.close()">Abbrechen</button></div></form>`); fa.onsubmit = e => { e.preventDefault(); const f = new FormData(e.target), o = { id: a.id || uid(), street: f.get('street').trim(), zip: f.get('zip').trim(), city: f.get('city').trim(), country: f.get('country').trim(), note: f.get('note').trim() }; a.id ? Object.assign(a, o) : db.addresses.push(o); save(); dlg.close(); }; }
@@ -159,6 +257,6 @@ function clearAll() { if (confirm('Wirklich ALLE lokalen Daten einschließlich F
     db = fresh();
     save();
 } }
-function renderBackup() { const bytes = new Blob([JSON.stringify(db)]).size; document.querySelector('#backup').innerHTML = `<div class="grid"><div class="card"><h2>Vollsicherung</h2><p>Enthält alle Stammdaten, Zuordnungen, Verträge, Vorgänge, Historie sowie <b>alle Fotos und Dokumente</b>.</p><button class="primary" onclick="exportBackup()">Vollsicherung herunterladen</button></div><div class="card"><h2>Wiederherstellen</h2><p>0.2.0- und 0.3.0-Sicherungen werden beim Import migriert.</p><input type="file" accept="application/json,.json" onchange="importBackup(this)"></div><div class="card"><h2>CSV</h2><p>Tabellarischer Zusatzexport der Vorgänge.</p><button onclick="exportCasesCSV()">Vorgänge als CSV</button></div><div class="card"><h2>Speicher</h2><p>Aktueller Datenbestand ca. <b>${(bytes / 1024 / 1024).toFixed(2)} MB</b>.</p></div></div><div class="card" style="margin-top:14px"><h2>Version</h2><p><b>${APP_VERSION}</b> · Schema ${db.schema}. Neu: installierbare PWA, Offline-Start und App-Shell-Cache; Daten bleiben lokal im Browserprofil.</p><button class="danger" onclick="clearAll()">Alle lokalen Daten löschen</button></div>`; }
+function renderBackup() { const bytes = new Blob([JSON.stringify(db)]).size; document.querySelector('#backup').innerHTML = `<div class="grid"><div class="card"><h2>Vollsicherung</h2><p>Enthält alle Stammdaten, Zuordnungen, Verträge, Vorgänge, Historie sowie <b>alle Fotos und Dokumente</b>.</p><button class="primary" onclick="exportBackup()">Vollsicherung herunterladen</button></div><div class="card"><h2>Wiederherstellen</h2><p>0.2.0- und 0.3.0-Sicherungen werden beim Import migriert.</p><input type="file" accept="application/json,.json" onchange="importBackup(this)"></div><div class="card"><h2>CSV</h2><p>Tabellarischer Zusatzexport der Vorgänge.</p><button onclick="exportCasesCSV()">Vorgänge als CSV</button></div><div class="card"><h2>Speicher</h2><p>Aktueller Datenbestand ca. <b>${(bytes / 1024 / 1024).toFixed(2)} MB</b>.</p></div></div><div class="card" style="margin-top:14px"><h2>Version</h2><p><b>${APP_VERSION}</b> · Schema ${db.schema}. Neu: responsive Navigation mit Hamburger-Menü auf Smartphones und schmalen Tablets; Desktop-Navigation bleibt direkt sichtbar.</p><button class="danger" onclick="clearAll()">Alle lokalen Daten löschen</button></div>`; }
 render();
 save();

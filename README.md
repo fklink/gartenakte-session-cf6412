@@ -1,4 +1,4 @@
-# Gartenakte 0.4.2
+# Gartenakte 0.5.0
 
 Portable Vereinsverwaltung als Progressive Web App (PWA) für GitHub Pages.
 
@@ -36,3 +36,8 @@ Die PWA nutzt ein modernes Gartenakte-Icon in den Dateien `icons/icon-192.png`, 
 ## Freigabeparameter
 
 Der konkrete Freigabecode wird bewusst nicht in dieser README dokumentiert. Er ist ausschließlich im ausgelieferten Frontend hinterlegt und stellt keinen echten Zugriffsschutz dar.
+
+
+## Navigation
+
+Auf Smartphones und schmalen Tablets wird die Navigation als seitliches Hamburger-Menü angezeigt. Auf breiten Displays bleibt die direkte Navigationsleiste sichtbar.

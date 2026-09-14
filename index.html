@@ -13,7 +13,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="robots" content="noindex,nofollow">
 
-  <title>Gartenakte 0.4.2</title>
+  <title>Gartenakte 0.5.0</title>
 
   <meta name="theme-color" content="#1f6f43">
   <meta name="apple-mobile-web-app-capable" content="yes">
@@ -26,22 +26,67 @@
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
-  <header>
-    <h1>Gartenakte <span class="badge">v0.4.2</span></h1>
-    <small>Lokales Provisorium · getrennte Personen-, Adress-, Parzellen- und Flächendaten</small>
+  <div id="drawerBackdrop" class="drawer-backdrop" aria-hidden="true"></div>
 
-    <nav>
-      <button data-tab="dashboard" class="active">Übersicht</button>
-      <button data-tab="people">Personen</button>
-      <button data-tab="addresses">Adressen</button>
-      <button data-tab="plots">Parzellen</button>
-      <button data-tab="land">Flächen &amp; Verträge</button>
-      <button data-tab="leases">Pachtverhältnisse</button>
-      <button data-tab="cases">Vorgänge</button>
-      <button data-tab="backup">Sicherung/Export</button>
-      <button id="installAppBtn" type="button" hidden>App installieren</button>
-      <a class="btn" href="qr.html">Link teilen</a>
+  <aside id="appDrawer" class="app-drawer" aria-label="Hauptmenü" aria-hidden="true">
+    <div class="drawer-brand">
+      <img src="icons/icon-192.png" alt="" class="drawer-logo">
+      <div>
+        <strong>Gartenakte</strong>
+        <span>Version 0.5.0</span>
+      </div>
+      <button id="drawerCloseBtn" class="icon-button drawer-close" type="button" aria-label="Menü schließen">×</button>
+    </div>
+
+    <nav class="drawer-nav">
+      <button data-tab="dashboard" class="drawer-tab active"><span class="menu-icon">⌂</span>Übersicht</button>
+      <button data-tab="people" class="drawer-tab"><span class="menu-icon">◉</span>Personen</button>
+      <button data-tab="addresses" class="drawer-tab"><span class="menu-icon">⌖</span>Adressen</button>
+      <button data-tab="plots" class="drawer-tab"><span class="menu-icon">▦</span>Parzellen</button>
+      <button data-tab="land" class="drawer-tab"><span class="menu-icon">▤</span>Flächen &amp; Verträge</button>
+      <button data-tab="leases" class="drawer-tab"><span class="menu-icon">⇄</span>Pachtverhältnisse</button>
+      <button data-tab="cases" class="drawer-tab"><span class="menu-icon">✓</span>Vorgänge</button>
+      <button data-tab="backup" class="drawer-tab"><span class="menu-icon">↓</span>Sicherung/Export</button>
     </nav>
+
+    <div class="drawer-footer">
+      <button class="install-app-btn drawer-action" type="button" hidden>App installieren</button>
+      <a class="btn drawer-action" href="qr.html">Link teilen</a>
+    </div>
+  </aside>
+
+  <header class="app-header">
+    <div class="mobile-appbar">
+      <button id="menuBtn" class="icon-button" type="button" aria-label="Menü öffnen" aria-expanded="false">☰</button>
+      <img src="icons/icon-192.png" alt="" class="app-logo">
+      <div class="mobile-title">
+        <strong>Gartenakte</strong>
+        <span>v0.5.0</span>
+      </div>
+    </div>
+
+    <div class="desktop-header">
+      <div class="desktop-brand">
+        <img src="icons/icon-192.png" alt="" class="app-logo">
+        <div>
+          <h1>Gartenakte <span class="badge">v0.5.0</span></h1>
+          <small>Lokales Provisorium · getrennte Personen-, Adress-, Parzellen- und Flächendaten</small>
+        </div>
+      </div>
+
+      <nav class="desktop-nav">
+        <button data-tab="dashboard" class="active">Übersicht</button>
+        <button data-tab="people">Personen</button>
+        <button data-tab="addresses">Adressen</button>
+        <button data-tab="plots">Parzellen</button>
+        <button data-tab="land">Flächen &amp; Verträge</button>
+        <button data-tab="leases">Pachtverhältnisse</button>
+        <button data-tab="cases">Vorgänge</button>
+        <button data-tab="backup">Sicherung/Export</button>
+        <button class="install-app-btn" type="button" hidden>App installieren</button>
+        <a class="btn" href="qr.html">Link teilen</a>
+      </nav>
+    </div>
   </header>
 
   <main>

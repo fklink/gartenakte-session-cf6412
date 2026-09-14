@@ -32,18 +32,17 @@ async function installApp() {
 }
 
 function updateInstallButton() {
-  const button = document.getElementById('installAppBtn');
-  if (!button) {
-    return;
-  }
+  const buttons = document.querySelectorAll('.install-app-btn');
 
-  if (isStandalone()) {
-    button.hidden = true;
-    return;
-  }
+  buttons.forEach(button => {
+    if (isStandalone()) {
+      button.hidden = true;
+      return;
+    }
 
-  button.hidden = false;
-  button.onclick = installApp;
+    button.hidden = false;
+    button.onclick = installApp;
+  });
 }
 
 window.addEventListener('beforeinstallprompt', event => {
