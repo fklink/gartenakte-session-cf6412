@@ -1,10 +1,10 @@
 {
-  "id": "./index.html?share=ebd7b1",
+  "id": "./index.html?share=b11e91",
   "name": "Gartenakte",
   "short_name": "Gartenakte",
   "description": "Lokale Verwaltungsanwendung für den Gartenverein.",
   "lang": "de-DE",
-  "start_url": "./index.html?share=ebd7b1",
+  "start_url": "./index.html?share=b11e91",
   "scope": "./",
   "display": "standalone",
   "orientation": "any",

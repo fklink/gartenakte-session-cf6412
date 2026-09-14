@@ -1,8 +1,8 @@
 'use strict';
 
-const CACHE_NAME = 'gartenakte-v0.4.1';
+const CACHE_NAME = 'gartenakte-v0.4.2';
 const APP_SHELL = [
-  './index.html?share=ebd7b1',
+  './index.html?share=b11e91',
   './style.css',
   './app.js',
   './pwa.js',
@@ -56,7 +56,7 @@ self.addEventListener('fetch', event => {
         })
         .catch(async () => {
           if (event.request.mode === 'navigate') {
-            return (await caches.match('./index.html?share=ebd7b1')) || (await caches.match('./404.html'));
+            return (await caches.match('./index.html?share=b11e91')) || (await caches.match('./404.html'));
           }
           throw new Error('Offline und Ressource nicht im Cache.');
         }))
