@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex,nofollow">
+
+  <title>Gartenakte teilen</title>
+
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <main class="wrap">
+    <section class="card qr-wrap">
+      <h1>Gartenakte teilen</h1>
+      <p class="muted">
+        Der QR-Code enthält nur den Link zur Anwendung. Lokale Vereinsdaten werden dadurch nicht übertragen.
+      </p>
+
+      <div id="qrcode"></div>
+      <div class="share-link" id="shareLink"></div>
+
+      <div class="actions">
+        <button type="button" onclick="copyLink()">Link kopieren</button>
+        <button type="button" onclick="window.location.href='index.html?share=ebd7b1'">Zurück</button>
+      </div>
+    </section>
+  </main>
+
+  <script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js" defer></script>
+  <script>
+    const shareUrl =
+      window.location.origin +
+      window.location.pathname.replace("qr.html", "index.html") +
+      "?share=ebd7b1";
+
+    document.getElementById("shareLink").textContent = shareUrl;
+
+    window.addEventListener("load", () => {
+      const target = document.getElementById("qrcode");
+
+      if (!window.QRCode) {
+        target.textContent = "QR-Code konnte nicht geladen werden. Bitte nutze den Link darunter.";
+        return;
+      }
+
+      new QRCode(target, {
+        text: shareUrl,
+        width: 220,
+        height: 220
+      });
+    });
+
+    async function copyLink() {
+      try {
+        await navigator.clipboard.writeText(shareUrl);
+        alert("Link kopiert");
+      } catch (error) {
+        window.prompt("Link kopieren:", shareUrl);
+      }
+    }
+  </script>
+</body>
+</html>

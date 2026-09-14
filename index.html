@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <script>
+    const params = new URLSearchParams(window.location.search);
+
+    if (params.get("share") !== "ebd7b1") {
+      window.location.replace("404.html");
+    }
+  </script>
+
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex,nofollow">
+
+  <title>Gartenakte 0.4.1</title>
+
+  <meta name="theme-color" content="#1f6f43">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="Gartenakte">
+
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="icon" type="image/png" href="icons/icon-192.png">
+  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header>
+    <h1>Gartenakte <span class="badge">v0.4.1</span></h1>
+    <small>Lokales Provisorium · getrennte Personen-, Adress-, Parzellen- und Flächendaten</small>
+
+    <nav>
+      <button data-tab="dashboard" class="active">Übersicht</button>
+      <button data-tab="people">Personen</button>
+      <button data-tab="addresses">Adressen</button>
+      <button data-tab="plots">Parzellen</button>
+      <button data-tab="land">Flächen &amp; Verträge</button>
+      <button data-tab="leases">Pachtverhältnisse</button>
+      <button data-tab="cases">Vorgänge</button>
+      <button data-tab="backup">Sicherung/Export</button>
+      <button id="installAppBtn" type="button" hidden>App installieren</button>
+      <a class="btn" href="qr.html">Link teilen</a>
+    </nav>
+  </header>
+
+  <main>
+    <div class="notice">
+      <b>Hinweis:</b>
+      Alle Daten bleiben lokal im Browserprofil. Vollsicherungen enthalten auch Fotos/Dokumente.
+      Regelmäßig auf ein getrenntes, geschütztes Medium sichern.
+    </div>
+
+    <section id="dashboard"></section>
+    <section id="people" class="hidden"></section>
+    <section id="addresses" class="hidden"></section>
+    <section id="plots" class="hidden"></section>
+    <section id="land" class="hidden"></section>
+    <section id="leases" class="hidden"></section>
+    <section id="cases" class="hidden"></section>
+    <section id="backup" class="hidden"></section>
+  </main>
+
+  <dialog id="dlg">
+    <div class="dialoghead" id="dlgTitle"></div>
+    <div class="dialogbody" id="dlgBody"></div>
+  </dialog>
+
+  <script src="app.js"></script>
+  <script src="pwa.js"></script>
+</body>
+</html>
