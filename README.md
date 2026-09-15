@@ -1,4 +1,4 @@
-# Gartenakte 0.7.0
+# Gartenakte 0.8.2
 
 Portable Vereinsverwaltung als Progressive Web App (PWA) für GitHub Pages.
 
@@ -51,12 +51,12 @@ Die lokale Speicherung ersetzt kein Backup. Regelmäßig unter „Sicherung/Expo
 Siehe auch [`ROADMAP.md`](ROADMAP.md).
 
 
-## Version 0.7.0
+## Version 0.8.2
 
-- gruppierte Navigation nach Fachbereichen
-- Mitgliedschaften als eigenes Objekt mit Mitgliedsart und Zeitraum
-- Unterpachtverhältnisse getrennt von Mitgliedschaften; mehrere Parzellen je Person möglich
-- allgemeine Verträge für Pacht, Strom, Wasser, Versicherungen und weitere Vertragsarten
-- Vertragspartner und Verknüpfung von Verträgen mit Flurstücken, Parzellen oder Inventar
-- Flurstücke, Wege und technische Objekte unter „Anlage & Inventar“
-- automatische Migration von Schema 3 / Version 0.6.x auf Schema 4
+- Parzellenübersicht unter 768 px als mobile Kartenansicht
+- Suche nach Parzellenname, Nummer, Weg oder Lage
+- Filter nach Weg und technischer Versorgung
+- Sortierung nach Nummer oder Weg
+- Desktop-Tabellenansicht unverändert ab 768 px
+- Bearbeiten-Aktion auf Smartphones vollständig sichtbar
+- keine horizontale Parzellentabelle als Standardansicht auf Smartphones

@@ -1,6 +1,6 @@
 # ROADMAP – Gartenakte
 
-Aktueller Stand: **0.7.0**
+Aktueller Stand: **0.8.2**
 
 ## 0.7.0 – Struktur, Mitgliedschaften & Verträge ✅ umgesetzt
 
@@ -116,7 +116,23 @@ Bestehende technische Inventarobjekte bleiben erhalten und werden in die neue Na
 
 ---
 
-## 0.8.0 – Mitglieder & Datenschutz
+## 0.8.0 – Mobile Parzellenübersicht ✅ umgesetzt
+
+Ziel: Die Parzellenübersicht auf Smartphones auf schnelles Finden und Bearbeiten einzelner Gärten ausrichten, ohne die Desktop-Tabelle zu verändern.
+
+- Desktop ab 768 px: Tabellenansicht
+- Smartphone unter 768 px: Kartenansicht
+- Suche nach Parzelle, Nummer, Weg oder Lage
+- Filter nach Weg
+- Filter nach Strom-/Wasserversorgung
+- Sortierung nach Nummer oder Weg
+- kompakte Label-Wert-Darstellung
+- vollständig sichtbare Bearbeiten-Aktion
+- leere optionale Angaben werden in den Karten reduziert bzw. ausgeblendet
+
+---
+
+## 0.9.0 – Mitglieder & Datenschutz
 
 Ziel: Personenbezogene und sensible Mitgliedsdaten getrennt von allgemeinen Vereins-, Anlagen- und Vorgangsdaten behandeln.
 
@@ -133,7 +149,7 @@ Ziel: Personenbezogene und sensible Mitgliedsdaten getrennt von allgemeinen Vere
 
 ---
 
-## 0.9.0 – Jubiläen & Kalender
+## 0.10.0 – Jubiläen & Kalender
 
 Ziel: Geburtstage und Vereinsjubiläen automatisch berechnen und frühzeitig anzeigen.
 
@@ -149,7 +165,7 @@ Ziel: Geburtstage und Vereinsjubiläen automatisch berechnen und frühzeitig anz
 
 ---
 
-## 0.10.0 – Karte & Geodaten
+## 0.11.0 – Karte & Geodaten
 
 Ziel: räumliche Vereins- und Infrastrukturdaten gemeinsam darstellen.
 
@@ -175,7 +191,7 @@ Bestehende Geodatenmodelle:
 
 ---
 
-## 0.11.0 – Vorgänge professionalisieren
+## 0.12.0 – Vorgänge professionalisieren
 
 Ziel: aus der bisherigen Vorgangsverwaltung ein belastbares Fallmanagement machen.
 
@@ -195,7 +211,7 @@ Ziel: aus der bisherigen Vorgangsverwaltung ein belastbares Fallmanagement mache
 
 ---
 
-## 0.12.0 – Dokumente & Schriftverkehr
+## 0.13.0 – Dokumente & Schriftverkehr
 
 - Vorlagenverwaltung
 - PDF-Erzeugung
@@ -209,7 +225,7 @@ Ziel: aus der bisherigen Vorgangsverwaltung ein belastbares Fallmanagement mache
 
 ---
 
-## 0.13.0 – Datenpflege & Import
+## 0.14.0 – Datenpflege & Import
 
 - ergänzender Stammdatenimport ohne Überschreiben des gesamten Bestands
 - Dublettenprüfung
@@ -222,7 +238,7 @@ Ziel: aus der bisherigen Vorgangsverwaltung ein belastbares Fallmanagement mache
 
 ---
 
-## 0.14.0 – Sicherheit & Benutzerkonzept
+## 0.15.0 – Sicherheit & Benutzerkonzept
 
 Falls die Anwendung später nicht mehr nur lokal auf einem einzelnen Gerät genutzt wird:
 
@@ -236,7 +252,7 @@ Falls die Anwendung später nicht mehr nur lokal auf einem einzelnen Gerät genu
 
 ---
 
-## 0.15.0 – Synchronisation & Mehrgerätebetrieb
+## 0.16.0 – Synchronisation & Mehrgerätebetrieb
 
 Nur falls tatsächlich benötigt:
 
@@ -249,7 +265,7 @@ Nur falls tatsächlich benötigt:
 
 ---
 
-## 0.16.0 – Auswertungen
+## 0.17.0 – Auswertungen
 
 - offene Vorgänge
 - Fristen

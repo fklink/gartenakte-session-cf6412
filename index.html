@@ -13,7 +13,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="robots" content="noindex,nofollow">
 
-  <title>Gartenakte 0.7.0</title>
+  <title>Gartenakte 0.8.2</title>
 
   <meta name="theme-color" content="#1f6f43">
   <meta name="apple-mobile-web-app-capable" content="yes">
@@ -33,7 +33,7 @@
       <img src="icons/icon-192.png" alt="" class="drawer-logo">
       <div>
         <strong>Gartenakte</strong>
-        <span>Version 0.7.0</span>
+        <span>Version 0.8.2</span>
       </div>
       <button id="drawerCloseBtn" class="icon-button drawer-close" type="button" aria-label="Menü schließen">×</button>
     </div>
@@ -78,31 +78,80 @@
       <img src="icons/icon-192.png" alt="" class="app-logo">
       <div class="mobile-title">
         <strong>Gartenakte</strong>
-        <span>v0.7.0</span>
+        <span>v0.8.2</span>
       </div>
     </div>
 
     <div class="desktop-header">
-      <div class="desktop-brand">
-        <img src="icons/icon-192.png" alt="" class="app-logo">
-        <div>
-          <h1>Gartenakte <span class="badge">v0.7.0</span></h1>
-          <small>Lokale Vereinsverwaltung · Personen, Mitgliedschaften, Verträge, Vorgänge und Anlage</small>
+      <div class="desktop-topbar">
+        <div class="desktop-brand">
+          <img src="icons/icon-192.png" alt="" class="app-logo">
+          <div class="brand-copy">
+            <div class="brand-title-row">
+              <h1>Gartenakte</h1>
+              <span class="badge">v0.8.2</span>
+            </div>
+            <small>Lokale Vereinsverwaltung</small>
+          </div>
         </div>
+
       </div>
 
-      <nav class="desktop-nav grouped-desktop-nav">
-        <div class="desktop-nav-primary">
-          <button data-tab="dashboard" class="active">Übersicht</button>
-          <button data-tab="cases">Vorgänge</button>
-        </div>
-        <div class="desktop-nav-group"><span>Mitglieder &amp; Personen</span><div><button data-tab="people">Personen</button><button data-tab="addresses">Adressen</button><button data-tab="memberships">Mitgliedschaften</button><button data-tab="leases">Unterpachtverhältnisse</button></div></div>
-        <div class="desktop-nav-group"><span>Verträge</span><div><button data-tab="contracts">Verträge &amp; Partner</button></div></div>
-        <div class="desktop-nav-group"><span>Anlage &amp; Inventar</span><div><button data-tab="plots">Parzellen</button><button data-tab="landparcels">Flurstücke</button><button data-tab="ways">Wege</button><button data-tab="gates">Außentore</button><button data-tab="panels">Unterverteilungen</button><button data-tab="valves">Wasserschieber</button><button data-tab="meters">Zähler</button><button data-tab="powerlines">Stromleitungen</button><button data-tab="waterlines">Wasserleitungen</button></div></div>
-        <div class="desktop-nav-group"><span>System</span><div><button data-tab="backup">Import &amp; Export</button><button class="install-app-btn" type="button" hidden>App installieren</button><a class="btn" href="qr.html">QR / Link teilen</a></div></div>
+      <nav class="desktop-nav desktop-menu-bar" aria-label="Hauptnavigation">
+        <button data-tab="dashboard" class="active">Übersicht</button>
+        <button data-tab="cases">Vorgänge</button>
+
+        <details class="desktop-menu">
+          <summary>Mitglieder &amp; Personen</summary>
+          <div class="desktop-menu-panel">
+            <button data-tab="people">Personen</button>
+            <button data-tab="addresses">Adressen</button>
+            <button data-tab="memberships">Mitgliedschaften</button>
+            <button data-tab="leases">Unterpachtverhältnisse</button>
+          </div>
+        </details>
+
+        <details class="desktop-menu">
+          <summary>Verträge</summary>
+          <div class="desktop-menu-panel">
+            <button data-tab="contracts">Verträge &amp; Partner</button>
+          </div>
+        </details>
+
+        <details class="desktop-menu">
+          <summary>Anlage &amp; Inventar</summary>
+          <div class="desktop-menu-panel desktop-menu-panel-wide">
+            <button data-tab="plots">Parzellen</button>
+            <button data-tab="landparcels">Flurstücke</button>
+            <button data-tab="ways">Wege</button>
+            <button data-tab="gates">Außentore</button>
+            <button data-tab="panels">Unterverteilungen</button>
+            <button data-tab="valves">Wasserschieber</button>
+            <button data-tab="meters">Zähler</button>
+            <button data-tab="powerlines">Stromleitungen</button>
+            <button data-tab="waterlines">Wasserleitungen</button>
+          </div>
+        </details>
+
+        <details class="desktop-menu desktop-system-menu">
+          <summary>System</summary>
+          <div class="desktop-menu-panel">
+            <button data-tab="backup">Import &amp; Export</button>
+            <button class="install-app-btn" type="button" hidden>App installieren</button>
+            <a class="btn" href="qr.html">QR / Link teilen</a>
+          </div>
+        </details>
       </nav>
     </div>
   </header>
+
+  <div class="location-shell">
+    <nav id="breadcrumb" class="breadcrumb" aria-label="Aktuelle Position">
+      <span id="breadcrumbGroup" class="breadcrumb-group">Übersicht</span>
+      <span id="breadcrumbSeparator" class="breadcrumb-separator" aria-hidden="true" hidden>›</span>
+      <strong id="breadcrumbPage" class="breadcrumb-page" hidden></strong>
+    </nav>
+  </div>
 
   <main>
     <div class="notice">

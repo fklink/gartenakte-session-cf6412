@@ -1,6 +1,13 @@
 'use strict';
-const APP_VERSION = '0.7.0', KEY = 'gartenakte_data', OLD_KEYS = ['gartenakte_1_0_0_data'];
+const APP_VERSION = '0.8.2', KEY = 'gartenakte_data', OLD_KEYS = ['gartenakte_1_0_0_data'];
 let db = load();
+
+const plotViewState = {
+  search: '',
+  wayId: '',
+  supply: '',
+  sort: 'number-asc'
+};
 
 function fresh() {
   return {
@@ -183,6 +190,43 @@ function activeAddressForPerson(personId, date = today()) { const rel = db.perso
 function addEvent(caseId, type, text, fromPersonId = '', toPersonId = '') { db.events.unshift({ id: uid(), caseId, at: now(), type, text, fromPersonId, toPersonId }); }
 function isOpen(c) { return c.status !== 'Abgeschlossen'; }
 function isOverdue(c) { return isOpen(c) && c.deadline && c.deadline < today(); }
+
+
+const NAVIGATION = {
+  dashboard: { group: 'Übersicht', page: '' },
+  cases: { group: 'Vorgänge', page: '' },
+  people: { group: 'Mitglieder & Personen', page: 'Personen' },
+  addresses: { group: 'Mitglieder & Personen', page: 'Adressen' },
+  memberships: { group: 'Mitglieder & Personen', page: 'Mitgliedschaften' },
+  leases: { group: 'Mitglieder & Personen', page: 'Unterpachtverhältnisse' },
+  contracts: { group: 'Verträge', page: 'Verträge & Partner' },
+  plots: { group: 'Anlage & Inventar', page: 'Parzellen' },
+  landparcels: { group: 'Anlage & Inventar', page: 'Flurstücke' },
+  ways: { group: 'Anlage & Inventar', page: 'Wege' },
+  gates: { group: 'Anlage & Inventar', page: 'Außentore' },
+  panels: { group: 'Anlage & Inventar', page: 'Unterverteilungen' },
+  valves: { group: 'Anlage & Inventar', page: 'Wasserschieber' },
+  meters: { group: 'Anlage & Inventar', page: 'Zähler' },
+  powerlines: { group: 'Anlage & Inventar', page: 'Stromleitungen' },
+  waterlines: { group: 'Anlage & Inventar', page: 'Wasserleitungen' },
+  backup: { group: 'System', page: 'Import & Export' }
+};
+
+function updateBreadcrumb(name) {
+  const location = NAVIGATION[name] || { group: name, page: '' };
+  const group = document.getElementById('breadcrumbGroup');
+  const separator = document.getElementById('breadcrumbSeparator');
+  const page = document.getElementById('breadcrumbPage');
+
+  if (group) group.textContent = location.group;
+
+  const hasPage = Boolean(location.page);
+  if (separator) separator.hidden = !hasPage;
+  if (page) {
+    page.hidden = !hasPage;
+    page.textContent = location.page;
+  }
+}
 function closeMenu() {
   const drawer = document.getElementById('appDrawer');
   const backdrop = document.getElementById('drawerBackdrop');
@@ -216,6 +260,12 @@ function tab(name) {
     button.classList.toggle('active', button.dataset.tab === name);
   });
 
+  document.querySelectorAll('.desktop-menu').forEach(menu => {
+    menu.classList.toggle('has-active', Boolean(menu.querySelector('[data-tab].active')));
+    menu.removeAttribute('open');
+  });
+
+  updateBreadcrumb(name);
   closeMenu();
 }
 
@@ -231,6 +281,8 @@ document.addEventListener('keydown', event => {
     closeMenu();
   }
 });
+
+// Sticky-Abstände werden in 0.7.9 bewusst statisch aus dem festen Desktop-Layout abgeleitet.
 function opts(items, sel, label) { return '<option value="">– keine –</option>' + items.map(x => `<option value="${x.id}" ${x.id === sel ? 'selected' : ''}>${esc(label(x))}</option>`).join(''); }
 function personOptions(sel = '') { return opts(db.people, sel, p => personName(p.id)); }
 function plotOptions(sel = '') { return opts(db.plots, sel, p => plotName(p.id)); }
@@ -256,6 +308,32 @@ function render() {
   renderInventoryCategory('powerlines', 'Stromleitungen', ['Stromleitung']);
   renderInventoryCategory('waterlines', 'Wasserleitungen', ['Wasserleitung', 'Wasserstrang']);
   renderBackup();
+  enhanceResponsiveTables();
+}
+
+function enhanceResponsiveTables() {
+  document.querySelectorAll('table').forEach(table => {
+    table.classList.add('data-table');
+
+    if (!table.parentElement?.classList.contains('table-scroll')) {
+      const wrapper = document.createElement('div');
+      wrapper.className = 'table-scroll';
+      table.parentNode.insertBefore(wrapper, table);
+      wrapper.appendChild(table);
+    }
+
+    const headerCells = table.querySelectorAll('thead th');
+    if (headerCells.length) {
+      headerCells[headerCells.length - 1].classList.add('col-actions');
+    }
+
+    table.querySelectorAll('tbody tr').forEach(row => {
+      const cells = row.querySelectorAll('td');
+      if (cells.length && !cells[cells.length - 1].hasAttribute('colspan')) {
+        cells[cells.length - 1].classList.add('col-actions');
+      }
+    });
+  });
 }
 function renderDashboard() {
   const open = db.cases.filter(isOpen);
@@ -297,16 +375,159 @@ function renderMemberships() {
     </div>`;
 }
 
+function filteredPlots() {
+  const search = plotViewState.search.trim().toLocaleLowerCase('de');
+  let items = db.plots.filter(p => {
+    const nameMatch = !search || [plotName(p.id), p.number, wayName(p.wayId), p.location]
+      .filter(Boolean)
+      .some(value => String(value).toLocaleLowerCase('de').includes(search));
+    const wayMatch = !plotViewState.wayId || p.wayId === plotViewState.wayId;
+    const supplyMatch = !plotViewState.supply
+      || (plotViewState.supply === 'water' && p.waterAvailable && !p.electricityAvailable)
+      || (plotViewState.supply === 'electricity' && !p.waterAvailable && p.electricityAvailable)
+      || (plotViewState.supply === 'both' && p.waterAvailable && p.electricityAvailable)
+      || (plotViewState.supply === 'none' && !p.waterAvailable && !p.electricityAvailable)
+      || (plotViewState.supply === 'any-water' && p.waterAvailable)
+      || (plotViewState.supply === 'any-electricity' && p.electricityAvailable);
+    return nameMatch && wayMatch && supplyMatch;
+  });
+
+  items.sort((a, b) => {
+    if (plotViewState.sort === 'number-desc') {
+      return String(b.number).localeCompare(String(a.number), 'de', { numeric: true });
+    }
+    if (plotViewState.sort === 'way') {
+      return wayName(a.wayId).localeCompare(wayName(b.wayId), 'de')
+        || String(a.number).localeCompare(String(b.number), 'de', { numeric: true });
+    }
+    return String(a.number).localeCompare(String(b.number), 'de', { numeric: true });
+  });
+
+  return items;
+}
+
+function supplyIcon(type) {
+  if (type === 'water') {
+    return '<svg class="supply-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12 2.5c-2.5 3.4-6 7.1-6 11.1a6 6 0 0 0 12 0c0-4-3.5-7.7-6-11.1Zm0 15.4a4.3 4.3 0 0 1-4.3-4.3c0-2.7 2.2-5.5 4.3-8.3 2.1 2.8 4.3 5.6 4.3 8.3a4.3 4.3 0 0 1-4.3 4.3Z" fill="currentColor"/></svg>';
+  }
+
+  return '<svg class="supply-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M13.2 2 5.8 13h5.1L9.9 22 18.2 10.5h-5.3L13.2 2Z" fill="currentColor"/></svg>';
+}
+
+function plotSupplyHtml(p) {
+  const items = [];
+
+  if (p.waterAvailable) {
+    items.push(`<span class="supply-item">${supplyIcon('water')}<span>Wasser</span></span>`);
+  }
+
+  if (p.electricityAvailable) {
+    items.push(`<span class="supply-item">${supplyIcon('electricity')}<span>Strom</span></span>`);
+  }
+
+  return items.length ? `<span class="supply-list">${items.join('')}</span>` : '<span class="supply-empty">–</span>';
+}
+
+function plotTableRows(items) {
+  if (!items.length) {
+    return '<tr><td colspan="6" class="muted">Keine passenden Parzellen.</td></tr>';
+  }
+
+  return items.map(p => {
+    const lease = activeLeaseForPlot(p.id);
+    const coordinate = p.latitude && p.longitude ? `${esc(p.latitude)}, ${esc(p.longitude)}` : '–';
+    return `<tr><td><b>${esc(plotName(p.id))}</b></td><td>${esc(wayName(p.wayId))}</td><td>${plotSupplyHtml(p)}</td><td>${coordinate}</td><td>${lease ? esc(personName(lease.personId)) : '–'}</td><td><button onclick="editPlot('${p.id}')">Bearbeiten</button></td></tr>`;
+  }).join('');
+}
+
+function plotCards(items) {
+  if (!items.length) {
+    return '<div class="plot-empty muted">Keine passenden Parzellen.</div>';
+  }
+
+  return items.map(p => {
+    const lease = activeLeaseForPlot(p.id);
+    const coordinate = p.latitude && p.longitude ? `${esc(p.latitude)}, ${esc(p.longitude)}` : '';
+    const way = wayName(p.wayId);
+    return `
+      <article class="plot-card">
+        <div class="plot-card__head">
+          <h3>${esc(plotName(p.id))}</h3>
+          ${way && way !== '–' ? `<span class="plot-card__way">${esc(way)}</span>` : ''}
+        </div>
+        <dl class="plot-card__facts">
+          <div><dt>Versorgung</dt><dd>${plotSupplyHtml(p)}</dd></div>
+          ${coordinate ? `<div><dt>Koordinate</dt><dd>${coordinate}</dd></div>` : ''}
+          ${lease ? `<div><dt>Unterpacht</dt><dd>${esc(personName(lease.personId))}</dd></div>` : ''}
+        </dl>
+        <div class="plot-card__actions">
+          <button type="button" onclick="editPlot('${p.id}')">Bearbeiten</button>
+        </div>
+      </article>`;
+  }).join('');
+}
+
+function updatePlotView() {
+  const items = filteredPlots();
+  const tbody = document.querySelector('#plotTableBody');
+  const cards = document.querySelector('#plotCardList');
+  const count = document.querySelector('#plotResultCount');
+  if (tbody) tbody.innerHTML = plotTableRows(items);
+  if (cards) cards.innerHTML = plotCards(items);
+  if (count) count.textContent = `${items.length} von ${db.plots.length} Parzellen`;
+  enhanceResponsiveTables();
+}
+
+function setPlotViewState(key, value) {
+  plotViewState[key] = value;
+  updatePlotView();
+}
+
 function renderPlots() {
+  const items = filteredPlots();
   document.querySelector('#plots').innerHTML = `
     <div class="actions"><button class="primary" onclick="editPlot()">+ Parzelle</button><button onclick="editPlotLandParcel()">+ Flurstück zuordnen</button></div>
-    <div class="card wide"><table><thead><tr><th>Parzelle</th><th>Weg</th><th>Versorgung</th><th>Koordinate</th><th>Unterpacht</th><th></th></tr></thead><tbody>
-    ${[...db.plots].sort((a,b)=>String(a.number).localeCompare(String(b.number),'de',{numeric:true})).map(p => {
-      const lease = activeLeaseForPlot(p.id);
-      const supply = [p.waterAvailable ? 'Wasser' : '', p.electricityAvailable ? 'Strom' : ''].filter(Boolean).join(' + ') || '–';
-      return `<tr><td><b>${esc(plotName(p.id))}</b></td><td>${esc(wayName(p.wayId))}</td><td>${esc(supply)}</td><td>${p.latitude && p.longitude ? `${esc(p.latitude)}, ${esc(p.longitude)}` : '–'}</td><td>${lease ? esc(personName(lease.personId)) : '–'}</td><td><button onclick="editPlot('${p.id}')">Bearbeiten</button></td></tr>`;
-    }).join('') || '<tr><td colspan="6" class="muted">Noch keine Parzellen.</td></tr>'}
-    </tbody></table></div>`;
+
+    <div class="plot-mobile-controls" aria-label="Parzellen suchen und filtern">
+      <label class="plot-search">
+        <span>Parzelle suchen</span>
+        <input type="search" value="${esc(plotViewState.search)}" placeholder="z. B. Garten 82" oninput="setPlotViewState('search', this.value)">
+      </label>
+      <div class="plot-filter-grid">
+        <label>
+          <span>Weg</span>
+          <select onchange="setPlotViewState('wayId', this.value)">
+            <option value="">Alle Wege</option>
+            ${[...db.ways].sort((a,b)=>a.name.localeCompare(b.name,'de')).map(w => `<option value="${w.id}" ${w.id === plotViewState.wayId ? 'selected' : ''}>${esc(w.name)}</option>`).join('')}
+          </select>
+        </label>
+        <label>
+          <span>Versorgung</span>
+          <select onchange="setPlotViewState('supply', this.value)">
+            <option value="" ${plotViewState.supply === '' ? 'selected' : ''}>Alle</option>
+            <option value="both" ${plotViewState.supply === 'both' ? 'selected' : ''}>Strom + Wasser</option>
+            <option value="any-water" ${plotViewState.supply === 'any-water' ? 'selected' : ''}>Mit Wasser</option>
+            <option value="any-electricity" ${plotViewState.supply === 'any-electricity' ? 'selected' : ''}>Mit Strom</option>
+            <option value="none" ${plotViewState.supply === 'none' ? 'selected' : ''}>Ohne Versorgung</option>
+          </select>
+        </label>
+        <label>
+          <span>Sortierung</span>
+          <select onchange="setPlotViewState('sort', this.value)">
+            <option value="number-asc" ${plotViewState.sort === 'number-asc' ? 'selected' : ''}>Nummer aufsteigend</option>
+            <option value="number-desc" ${plotViewState.sort === 'number-desc' ? 'selected' : ''}>Nummer absteigend</option>
+            <option value="way" ${plotViewState.sort === 'way' ? 'selected' : ''}>Weg, dann Nummer</option>
+          </select>
+        </label>
+      </div>
+      <div id="plotResultCount" class="plot-result-count">${items.length} von ${db.plots.length} Parzellen</div>
+    </div>
+
+    <div class="card wide plots-table-region">
+      <table class="plot-table"><colgroup><col class="plot-col-parzelle"><col class="plot-col-weg"><col class="plot-col-versorgung"><col class="plot-col-koordinate"><col class="plot-col-unterpacht"><col class="plot-col-actions"></colgroup><thead><tr><th class="col-parzelle">Parzelle</th><th class="col-weg">Weg</th><th class="col-versorgung">Versorgung</th><th class="col-koordinate">Koordinate</th><th class="col-unterpacht">Unterpacht</th><th class="col-actions" aria-label="Aktion"></th></tr></thead><tbody id="plotTableBody">${plotTableRows(items)}</tbody></table>
+    </div>
+
+    <div id="plotCardList" class="plot-card-list">${plotCards(items)}</div>`;
 }
 
 function renderLandParcels() {
@@ -587,3 +808,48 @@ function renderBackup() {
 render();
 save();
 save();
+
+
+/* 0.8.1 – Sticky-Metriken aus dem realen Layout ableiten.
+ * Die Variablen beeinflussen ausschließlich nachgelagerte Sticky-Offsets,
+ * niemals die Höhe der gemessenen Elemente selbst. Dadurch entsteht keine
+ * ResizeObserver-Rückkopplung. */
+function syncStickyLayoutMetrics() {
+  const root = document.documentElement;
+  const desktop = window.matchMedia('(min-width: 861px)').matches;
+
+  if (desktop) {
+    const productRow = document.querySelector('.desktop-topbar');
+    const mainNav = document.querySelector('.desktop-menu-bar');
+    const breadcrumb = document.querySelector('.location-shell');
+
+    root.style.setProperty('--app-header-height', `${Math.ceil(productRow?.getBoundingClientRect().height || 0)}px`);
+    root.style.setProperty('--main-nav-height', `${Math.ceil(mainNav?.getBoundingClientRect().height || 0)}px`);
+    root.style.setProperty('--breadcrumb-height', `${Math.ceil(breadcrumb?.getBoundingClientRect().height || 0)}px`);
+  } else {
+    const mobileBar = document.querySelector('.mobile-appbar');
+    root.style.setProperty('--app-header-height', `${Math.ceil(mobileBar?.getBoundingClientRect().height || 0)}px`);
+    root.style.setProperty('--main-nav-height', '0px');
+    root.style.setProperty('--breadcrumb-height', '0px');
+  }
+}
+
+let stickyMetricsFrame = 0;
+function scheduleStickyLayoutMetrics() {
+  cancelAnimationFrame(stickyMetricsFrame);
+  stickyMetricsFrame = requestAnimationFrame(syncStickyLayoutMetrics);
+}
+
+window.addEventListener('resize', scheduleStickyLayoutMetrics, { passive: true });
+window.addEventListener('orientationchange', scheduleStickyLayoutMetrics, { passive: true });
+window.addEventListener('load', scheduleStickyLayoutMetrics, { once: true });
+
+if ('ResizeObserver' in window) {
+  const stickyMetricsObserver = new ResizeObserver(scheduleStickyLayoutMetrics);
+  ['.desktop-topbar', '.desktop-menu-bar', '.location-shell', '.mobile-appbar'].forEach(selector => {
+    const element = document.querySelector(selector);
+    if (element) stickyMetricsObserver.observe(element);
+  });
+}
+
+scheduleStickyLayoutMetrics();

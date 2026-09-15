@@ -597,54 +597,1439 @@ legend {
   padding-left: 20px;
 }
 
-.grouped-desktop-nav {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
-  gap: 10px;
-  align-items: start;
-}
-
-.desktop-nav-primary,
-.desktop-nav-group {
+/* 0.7.1 – kompakte Desktop-Navigation */
+.desktop-menu-bar {
   display: flex;
-  flex-wrap: wrap;
+  align-items: center;
   gap: 6px;
-  padding: 8px;
+  flex-wrap: nowrap;
+  margin-top: 12px;
+  padding: 6px;
   border: 1px solid #e1e6e2;
-  border-radius: 10px;
+  border-radius: 12px;
   background: #fafbfa;
 }
 
-.desktop-nav-primary {
-  align-content: flex-start;
+.desktop-menu-bar > button,
+.desktop-menu > summary {
+  min-height: 38px;
+  padding: 8px 12px;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  background: transparent;
+  color: #202124;
+  font: inherit;
+  font-size: 13px;
+  cursor: pointer;
+  white-space: nowrap;
 }
 
-.desktop-nav-group > span {
-  width: 100%;
-  padding: 0 3px 3px;
-  color: #66736b;
-  font-size: 11px;
-  font-weight: 800;
-  letter-spacing: .04em;
-  text-transform: uppercase;
+.desktop-menu-bar > button:hover,
+.desktop-menu > summary:hover,
+.desktop-menu[open] > summary {
+  background: #eef4ef;
 }
 
-.desktop-nav-group > div {
+.desktop-menu-bar > button.active,
+.desktop-menu.has-active > summary {
+  border-color: #b8d4c2;
+  background: #e7f2ea;
+  color: #185f39;
+  font-weight: 700;
+}
+
+.desktop-menu {
+  position: relative;
+}
+
+.desktop-menu > summary {
   display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
+  align-items: center;
+  gap: 7px;
+  list-style: none;
 }
 
-.desktop-nav-primary button,
-.desktop-nav-group button,
-.desktop-nav-group .btn {
-  min-height: 36px;
-  padding: 7px 10px;
+.desktop-menu > summary::-webkit-details-marker {
+  display: none;
+}
+
+.desktop-menu > summary::after {
+  content: "▾";
+  color: #68736c;
+  font-size: 10px;
+  transition: transform 120ms ease;
+}
+
+.desktop-menu[open] > summary::after {
+  transform: rotate(180deg);
+}
+
+.desktop-menu-panel {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  z-index: 30;
+  display: grid;
+  min-width: 230px;
+  gap: 4px;
+  padding: 8px;
+  border: 1px solid #dbe2dd;
+  border-radius: 10px;
+  background: #fff;
+  box-shadow: 0 12px 30px rgba(20, 35, 25, 0.16);
+}
+
+.desktop-menu-panel-wide {
+  grid-template-columns: repeat(2, minmax(170px, 1fr));
+  min-width: 380px;
+}
+
+.desktop-menu-panel button,
+.desktop-menu-panel .btn {
+  justify-content: flex-start;
+  width: 100%;
+  min-height: 38px;
+  padding: 8px 10px;
+  border-color: transparent;
+  background: transparent;
+  font-size: 13px;
+  text-align: left;
+}
+
+.desktop-menu-panel button:hover,
+.desktop-menu-panel .btn:hover {
+  background: #f2f6f3;
+}
+
+.desktop-menu-panel button.active {
+  background: #e7f2ea;
+  color: #185f39;
+  font-weight: 700;
+}
+
+.desktop-menu-right {
+  margin-left: auto;
+}
+
+.desktop-menu-right .desktop-menu-panel {
+  right: 0;
+  left: auto;
+}
+
+@media (max-width: 1080px) and (min-width: 861px) {
+  .desktop-menu-bar > button,
+  .desktop-menu > summary {
+    padding-right: 9px;
+    padding-left: 9px;
+    font-size: 12px;
+  }
+}
+
+
+
+/* 0.7.2 – sichtbarer Navigationsstandort */
+.location-shell {
+  border-bottom: 1px solid #e3e8e4;
+  background: #fff;
+}
+
+.breadcrumb {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  max-width: 1380px;
+  min-height: 38px;
+  margin: 0 auto;
+  padding: 7px 16px;
+  color: #5f6c64;
   font-size: 13px;
 }
 
-@media (max-width: 1100px) and (min-width: 861px) {
-  .grouped-desktop-nav {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+.breadcrumb-group {
+  font-weight: 600;
+}
+
+.breadcrumb-separator {
+  color: #9aa39d;
+}
+
+.breadcrumb-page {
+  color: #185f39;
+  font-weight: 750;
+}
+
+.desktop-menu.has-active > summary {
+  box-shadow: inset 0 -2px 0 #1f6f43;
+}
+
+.desktop-menu-panel button.active {
+  position: relative;
+  padding-left: 26px;
+}
+
+.desktop-menu-panel button.active::before {
+  content: "";
+  position: absolute;
+  left: 10px;
+  width: 7px;
+  height: 7px;
+  border-radius: 999px;
+  background: #1f6f43;
+}
+
+@media (max-width: 860px) {
+  .breadcrumb {
+    min-height: 34px;
+    padding: 6px 12px;
+    font-size: 12px;
+    overflow-x: auto;
+    white-space: nowrap;
+  }
+}
+
+/* 0.7.3 – kompakter Header, dezente aktive Navigation und ruhiger Breadcrumb */
+@media (min-width: 861px) {
+  .app-header {
+    padding: 10px 18px 8px;
+  }
+
+  .desktop-brand {
+    gap: 10px;
+  }
+
+  .desktop-brand .app-logo {
+    width: 42px;
+    height: 42px;
+    border-radius: 11px;
+  }
+
+  .desktop-brand h1 {
+    font-size: 21px;
+    line-height: 1.15;
+  }
+
+  .desktop-brand small {
+    display: block;
+    margin-top: 2px;
+    color: #7a827d;
+    font-size: 12px;
+    line-height: 1.25;
+  }
+
+  .desktop-menu-bar {
+    min-height: 42px;
+    gap: 4px;
+    margin-top: 8px;
+    padding: 2px 4px;
+  }
+
+  .desktop-menu-bar > button,
+  .desktop-menu > summary {
+    position: relative;
+    min-height: 36px;
+    padding: 10px 11px 9px;
+    border: 0;
+    border-radius: 6px;
+    background: transparent;
+    font-size: 13px;
+    font-weight: 500;
+    line-height: 1;
+  }
+
+  .desktop-menu-bar > button:hover,
+  .desktop-menu > summary:hover {
+    background: #f1f5f2;
+    color: #234c34;
+  }
+
+  .desktop-menu[open] > summary {
+    background: #edf4ef;
+    color: #205a38;
+  }
+
+  .desktop-menu-bar > button.active,
+  .desktop-menu.has-active > summary {
+    background: #f3f8f4;
+    color: #185f39;
+    font-weight: 600;
+  }
+
+  .desktop-menu-bar > button.active::before,
+  .desktop-menu.has-active > summary::before {
+    content: "";
+    position: absolute;
+    right: 8px;
+    bottom: -2px;
+    left: 8px;
+    height: 2px;
+    border-radius: 2px;
+    background: #1f6f43;
+  }
+
+  .desktop-menu > summary {
+    gap: 6px;
+  }
+
+  .desktop-menu > summary::after {
+    content: "▾";
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 11px;
+    height: 11px;
+    margin-left: 0;
+    color: #758078;
+    font-size: 11px;
+    line-height: 1;
+    transform-origin: center;
+  }
+
+  .desktop-menu[open] > summary::after {
+    transform: rotate(180deg);
+  }
+
+  .desktop-menu-right {
+    margin-left: auto;
+    align-self: center;
+  }
+
+  .desktop-menu-panel button.active {
+    background: #f0f6f2;
+    color: #185f39;
+    font-weight: 600;
+  }
+
+  .breadcrumb {
+    min-height: 30px;
+    gap: 6px;
+    padding-top: 5px;
+    padding-bottom: 5px;
+    color: #7a827d;
+    font-size: 12.5px;
+    line-height: 1.2;
+  }
+
+  .breadcrumb-group {
+    color: #7a827d;
+    font-weight: 400;
+  }
+
+  .breadcrumb-separator {
+    color: #afb5b1;
+  }
+
+  .breadcrumb-page {
+    color: #3e5f4b;
+    font-weight: 600;
+  }
+}
+
+@media (max-width: 1080px) and (min-width: 861px) {
+  .desktop-menu-bar > button,
+  .desktop-menu > summary {
+    padding-right: 9px;
+    padding-left: 9px;
+    font-size: 12px;
+  }
+}
+
+
+
+/* 0.7.4 – zweistufiger Desktop-App-Header */
+@media (min-width: 861px) {
+  .app-header {
+    padding: 0;
+    border-bottom: 0;
+    background: #fff;
+  }
+
+  .desktop-header {
+    max-width: 1380px;
+    margin: 0 auto;
+    padding: 8px 16px 0;
+  }
+
+  .desktop-topbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    min-height: 46px;
+    gap: 20px;
+  }
+
+  .desktop-brand {
+    gap: 9px;
+    min-width: 0;
+  }
+
+  .desktop-brand .app-logo {
+    width: 38px;
+    height: 38px;
+    border-radius: 10px;
+  }
+
+  .brand-copy {
+    min-width: 0;
+  }
+
+  .brand-title-row {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+  }
+
+  .desktop-brand h1 {
+    margin: 0;
+    font-size: 19px;
+    line-height: 1.1;
+    letter-spacing: -0.01em;
+  }
+
+  .desktop-brand .badge {
+    padding: 2px 6px;
+    font-size: 10.5px;
+    line-height: 1.25;
+  }
+
+  .desktop-brand small {
+    display: block;
+    margin-top: 2px;
+    color: #87908a;
+    font-size: 10.5px;
+    line-height: 1.15;
+  }
+
+  .desktop-menu-bar {
+    display: flex;
+    align-items: flex-end;
+    gap: 24px;
+    min-height: 38px;
+    margin-top: 2px;
+    padding: 0;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+  }
+
+  .desktop-menu-bar > button,
+  .desktop-menu-bar > .desktop-menu > summary,
+  .desktop-utility-menu > summary {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    min-height: 38px;
+    padding: 8px 0 9px;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+    color: #4f5953;
+    font: inherit;
+    font-size: 13px;
+    font-weight: 500;
+    line-height: 1.2;
+    white-space: nowrap;
+    cursor: pointer;
+  }
+
+  .desktop-menu-bar > button:hover,
+  .desktop-menu-bar > .desktop-menu > summary:hover,
+  .desktop-utility-menu > summary:hover {
+    background: transparent;
+    color: #1f6f43;
+  }
+
+  .desktop-menu-bar > button.active,
+  .desktop-menu-bar > .desktop-menu.has-active > summary,
+  .desktop-utility-menu.has-active > summary {
+    background: transparent;
+    color: #185f39;
+    font-weight: 600;
+  }
+
+  .desktop-menu-bar > button.active::before,
+  .desktop-menu-bar > .desktop-menu.has-active > summary::before {
+    content: "";
+    position: absolute;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    height: 2px;
+    border-radius: 0;
+    background: #1f6f43;
+  }
+
+  .desktop-menu-bar > .desktop-menu[open] > summary,
+  .desktop-utility-menu[open] > summary {
+    background: transparent;
+    color: #185f39;
+  }
+
+  .desktop-menu > summary {
+    gap: 6px;
+  }
+
+  .desktop-menu > summary::after,
+  .desktop-utility-menu > summary::after {
+    content: "▾";
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 11px;
+    height: 11px;
+    margin-left: 0;
+    color: #87908a;
+    font-size: 10px;
+    line-height: 1;
+    transform-origin: center;
+    transition: transform 120ms ease;
+  }
+
+  .desktop-menu[open] > summary::after,
+  .desktop-utility-menu[open] > summary::after {
+    transform: rotate(180deg);
+  }
+
+  .desktop-utility-menu {
+    position: relative;
+    flex: 0 0 auto;
+  }
+
+  .desktop-utility-menu > summary {
+    min-height: 32px;
+    padding: 6px 0;
+    color: #657069;
+    font-size: 12.5px;
+  }
+
+  .desktop-utility-menu .desktop-menu-panel {
+    right: 0;
+    left: auto;
+  }
+
+  .desktop-menu-panel {
+    top: calc(100% + 4px);
+  }
+
+  .desktop-menu-panel button.active {
+    background: #f0f6f2;
+    color: #185f39;
+    font-weight: 600;
+  }
+
+  .location-shell {
+    border-top: 1px solid #e5e9e6;
+    border-bottom: 1px solid #edf0ee;
+  }
+
+  .breadcrumb {
+    min-height: 27px;
+    gap: 5px;
+    padding-top: 4px;
+    padding-bottom: 4px;
+    color: #8b938e;
+    font-size: 12px;
+    line-height: 1.15;
+  }
+
+  .breadcrumb-group {
+    color: #8b938e;
+    font-weight: 400;
+  }
+
+  .breadcrumb-separator {
+    color: #b0b6b2;
+  }
+
+  .breadcrumb-page {
+    color: #59665e;
+    font-weight: 600;
+  }
+}
+
+@media (max-width: 1080px) and (min-width: 861px) {
+  .desktop-menu-bar {
+    gap: 16px;
+  }
+
+  .desktop-menu-bar > button,
+  .desktop-menu-bar > .desktop-menu > summary {
+    padding-right: 0;
+    padding-left: 0;
+    font-size: 12px;
+  }
+}
+
+
+/* 0.7.5 – Sticky App-Header, Kontextzeile und Tabellenköpfe */
+:root {
+  --app-header-height: 94px;
+  --page-context-height: 29px;
+  --sticky-content-offset: calc(
+    var(--app-header-height) +
+    var(--page-context-height)
+  );
+}
+
+html {
+  scroll-padding-top: calc(var(--sticky-content-offset) + 12px);
+}
+
+.app-header {
+  position: sticky;
+  top: 0;
+  z-index: 1000;
+  background: #fff;
+  border-bottom: 1px solid #e3e7e4;
+}
+
+.desktop-menu-panel {
+  z-index: 1100;
+}
+
+main section,
+[id] {
+  scroll-margin-top: calc(var(--sticky-content-offset) + 12px);
+}
+
+@media (min-width: 861px) {
+  .location-shell {
+    position: sticky;
+    top: var(--app-header-height);
+    z-index: 900;
+    background: #fff;
+    border-top: 0;
+    border-bottom: 1px solid #e5e8e6;
+  }
+
+  .breadcrumb {
+    height: 27px;
+    min-height: 27px;
+  }
+
+  /*
+   * Auf Desktop/Tablet scrollt die Seite vertikal. Ein vertikaler
+   * Overflow-Container um die Tabelle würde position: sticky an diesen
+   * Container binden und den Tabellenkopf vom Viewport lösen.
+   */
+  .wide {
+    overflow: visible;
+  }
+
+  table thead th {
+    position: sticky;
+    top: var(--sticky-content-offset);
+    z-index: 100;
+    background: #f3f5f4;
+    box-shadow: 0 1px 0 rgba(0, 0, 0, 0.08);
+  }
+}
+
+@media (max-width: 860px) {
+  :root {
+    --page-context-height: 0px;
+  }
+
+  /* Auf kleinen Displays bleibt nur die kompakte App-Leiste sticky. */
+  .location-shell {
+    position: static;
+  }
+
+  .wide {
+    overflow-x: auto;
+    overflow-y: visible;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  table thead th {
+    position: static;
+  }
+
+  html {
+    scroll-padding-top: calc(var(--app-header-height) + 12px);
+  }
+
+  main section,
+  [id] {
+    scroll-margin-top: calc(var(--app-header-height) + 12px);
+  }
+}
+
+/* 0.7.7 – Feinschliff Sticky-Bereich */
+@media (min-width: 861px) {
+  :root {
+    --app-header-height: 60px;
+    --page-context-height: 27px;
+    --sticky-table-gap: 5px;
+    --sticky-content-offset: calc(
+      var(--app-header-height) +
+      var(--page-context-height)
+    );
+  }
+
+  /* Kompakter Sticky-Header: Produktzeile + Hauptnavigation. */
+  .desktop-header {
+    padding-top: 3px;
+  }
+
+  .desktop-topbar {
+    min-height: 28px;
+  }
+
+  .desktop-brand .app-logo {
+    width: 28px;
+    height: 28px;
+    border-radius: 7px;
+  }
+
+  .desktop-brand h1 {
+    font-size: 17px;
+  }
+
+  .desktop-brand .badge {
+    padding: 1px 5px;
+    font-size: 9.5px;
+  }
+
+  /* Die Beschreibung ist im dauerhaft sichtbaren Sticky-Bereich entbehrlich. */
+  .desktop-brand small {
+    display: none;
+  }
+
+  .desktop-menu-bar {
+    min-height: 29px;
+    margin-top: 0;
+  }
+
+  .desktop-menu-bar > button,
+  .desktop-menu-bar > .desktop-menu > summary {
+    min-height: 29px;
+    padding-top: 5px;
+    padding-bottom: 6px;
+  }
+
+  .desktop-utility-menu > summary {
+    min-height: 28px;
+    padding-top: 4px;
+    padding-bottom: 4px;
+  }
+
+  /* Breadcrumb bleibt direkt am Header, aber optisch klar untergeordnet. */
+  .location-shell {
+    min-height: var(--page-context-height);
+    border-top: 1px solid #e5e9e6;
+    border-bottom: 1px solid #dfe4e1;
+    box-shadow: 0 1px 0 rgba(24, 48, 34, 0.025);
+  }
+
+  .breadcrumb {
+    height: var(--page-context-height);
+    min-height: var(--page-context-height);
+    padding-top: 3px;
+    padding-bottom: 3px;
+    font-size: 12px;
+    line-height: 1.15;
+  }
+
+  /*
+   * Kleine visuelle Luft zwischen Kontextzeile und Tabellenkopf.
+   * Der Tabellenkopf klebt bewusst unterhalb dieses Abstands.
+   */
+  table thead th {
+    top: calc(var(--sticky-content-offset) + var(--sticky-table-gap));
+    z-index: 100;
+    background: #eef1ef;
+    border-bottom: 1px solid #d9dfdb;
+    box-shadow: 0 1px 0 rgba(0, 0, 0, 0.055);
+    color: #414a44;
+    font-size: 12.5px;
+    font-weight: 600;
+  }
+
+  html {
+    scroll-padding-top: calc(
+      var(--sticky-content-offset) +
+      var(--sticky-table-gap) +
+      10px
+    );
+  }
+
+  main section,
+  [id] {
+    scroll-margin-top: calc(
+      var(--sticky-content-offset) +
+      var(--sticky-table-gap) +
+      10px
+    );
+  }
+}
+
+
+/* 0.7.8 – Produktkopf, System-Position und Tabellenkopf */
+@media (min-width: 861px) {
+  :root {
+    --app-header-height: 62px;
+    --page-context-height: 27px;
+    --sticky-table-gap: 0px;
+    --sticky-content-offset: calc(
+      var(--app-header-height) +
+      var(--page-context-height)
+    );
+  }
+
+  /* Produktzeile enthält ausschließlich Logo, Produktname und Version. */
+  .desktop-header {
+    padding: 0 16px;
+  }
+
+  .desktop-topbar {
+    min-height: 31px;
+    height: 31px;
+    justify-content: flex-start;
+  }
+
+  .desktop-brand .app-logo {
+    width: 26px;
+    height: 26px;
+    border-radius: 7px;
+  }
+
+  .desktop-brand h1 {
+    font-size: 16.5px;
+  }
+
+  .desktop-brand .badge {
+    font-size: 9.5px;
+  }
+
+  .desktop-brand small {
+    display: none;
+  }
+
+  /* Hauptnavigation inklusive System in einer gemeinsamen Zeile. */
+  .desktop-menu-bar {
+    align-items: center;
+    min-height: 31px;
+    height: 31px;
+    margin: 0;
+    gap: 24px;
+  }
+
+  .desktop-menu-bar > button,
+  .desktop-menu-bar > .desktop-menu > summary {
+    min-height: 31px;
+    height: 31px;
+    padding: 6px 0 7px;
+    font-size: 13px;
+  }
+
+  .desktop-system-menu {
+    margin-left: auto;
+    margin-right: 8px;
+  }
+
+  .desktop-system-menu > summary {
+    color: #4f5953;
+  }
+
+  .desktop-system-menu .desktop-menu-panel {
+    right: 0;
+    left: auto;
+  }
+
+  /* Die alte Utility-Position ist in 0.7.8 nicht mehr Teil des Layouts. */
+  .desktop-utility-menu {
+    display: none;
+  }
+
+  /* Kontextzeile bleibt leicht und klar vom Tabellenkopf getrennt. */
+  .location-shell {
+    top: var(--app-header-height);
+    min-height: var(--page-context-height);
+    border-bottom: 1px solid #e4e8e5;
+    box-shadow: none;
+  }
+
+  .breadcrumb {
+    height: var(--page-context-height);
+    min-height: var(--page-context-height);
+    padding-top: 3px;
+    padding-bottom: 3px;
+  }
+
+  /* Tabellenkopf ist eindeutig Teil der Tabelle, nicht des Headers. */
+  table thead th {
+    top: var(--sticky-content-offset);
+    height: 42px;
+    padding: 0 9px;
+    vertical-align: middle;
+    background: #eef1ef;
+    border-bottom: 1px solid #d9dfdb;
+    box-shadow: 0 1px 0 rgba(0, 0, 0, 0.06);
+    color: #3f4842;
+    font-size: 13px;
+    font-weight: 600;
+    line-height: 1.2;
+  }
+
+  table tbody td {
+    padding-right: 9px;
+    padding-left: 9px;
+  }
+
+  html {
+    scroll-padding-top: calc(var(--sticky-content-offset) + 10px);
+  }
+
+  main section,
+  [id] {
+    scroll-margin-top: calc(var(--sticky-content-offset) + 10px);
+  }
+}
+
+@media (max-width: 1080px) and (min-width: 861px) {
+  .desktop-menu-bar {
+    gap: 16px;
+  }
+
+  .desktop-system-menu {
+    margin-right: 0;
+  }
+}
+
+/* 0.7.9 – Responsive Datentabellen */
+.table-scroll {
+  width: 100%;
+  max-width: 100%;
+  overflow-x: auto;
+  overflow-y: visible;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior-x: contain;
+}
+
+.data-table {
+  width: 100%;
+  table-layout: auto;
+}
+
+/* Die Aktionsspalte darf niemals auf eine unbedienbare Breite schrumpfen. */
+.data-table .col-actions,
+.data-table th:last-child,
+.data-table td:last-child:not([colspan]) {
+  width: 120px;
+  min-width: 120px;
+}
+
+/* Parzellenliste: fachlich sinnvolle Mindestbreiten statt Gleichverteilung. */
+.plot-table .col-parzelle {
+  min-width: 140px;
+}
+
+.plot-table .col-weg {
+  min-width: 110px;
+}
+
+.plot-table .col-versorgung {
+  min-width: 140px;
+}
+
+.plot-table .col-koordinate {
+  min-width: 150px;
+}
+
+.plot-table .col-unterpacht {
+  min-width: 140px;
+}
+
+@media (max-width: 900px) {
+  /* Nur die Tabelle scrollt horizontal, niemals die ganze Seite. */
+  body,
+  main,
+  main section,
+  .card {
+    max-width: 100%;
+    min-width: 0;
+  }
+
+  .wide {
+    overflow: visible;
+    min-width: 0;
+  }
+
+  .table-scroll {
+    position: relative;
+    max-width: 100%;
+    margin: 0;
+    border-radius: inherit;
+  }
+
+  .data-table {
+    min-width: 850px;
+  }
+
+  /* Rechte Aktionsspalte bleibt auch beim horizontalen Scrollen erreichbar. */
+  .data-table th:last-child,
+  .data-table td:last-child:not([colspan]) {
+    position: sticky;
+    right: 0;
+    z-index: 2;
+    background: #fff;
+    box-shadow: -1px 0 0 #dfe3e1;
+  }
+
+  .data-table thead th:last-child {
+    z-index: 103;
+    background: #eef1ef;
+  }
+
+  /* Tabellenkopf und Body bleiben ein einziges Spaltenraster. */
+  .data-table thead th {
+    box-sizing: border-box;
+  }
+}
+
+@media (max-width: 600px) {
+  .data-table th,
+  .data-table td {
+    padding-right: 12px;
+    padding-left: 12px;
+  }
+
+  .data-table thead th {
+    font-size: 13px;
+  }
+
+  .data-table .col-actions,
+  .data-table th:last-child,
+  .data-table td:last-child:not([colspan]) {
+    width: 112px;
+    min-width: 112px;
+  }
+
+  /* 0.5.x-Kartenansicht für Vorgänge deaktivieren: ab 0.7.9 bleibt die
+     Tabellenlogik auf allen Geräten konsistent horizontal scrollbar. */
+  .case-table,
+  .case-table tbody,
+  .case-table tr,
+  .case-table td {
+    display: revert;
+    width: auto;
+  }
+
+  .case-table {
+    min-width: 850px;
+    background: #fff;
+  }
+
+  .case-table thead {
+    display: table-header-group;
+  }
+
+  .case-table tr {
+    margin: 0;
+    padding: 0;
+    background: transparent;
+    border: 0;
+    border-radius: 0;
+    box-shadow: none;
+  }
+
+  .case-table td {
+    display: table-cell;
+    padding: 10px 12px;
+    border-bottom: 1px solid #e7e7e7;
+  }
+
+  .case-table td::before {
+    content: none;
+  }
+
+  .case-table td[data-label="Aktion"] button {
+    width: auto;
+  }
+}
+
+@media (max-width: 860px) {
+  /* Auf Mobil bleibt nur die kompakte App-Leiste sticky; der Tabellenkopf
+     klebt deshalb direkt darunter. */
+  .data-table thead th {
+    position: sticky;
+    top: var(--app-header-height);
+    z-index: 100;
+    background: #eef1ef;
+    border-bottom: 1px solid #d9dfdb;
+    box-shadow: 0 1px 0 rgba(0, 0, 0, 0.06);
+  }
+
+  .data-table thead th:last-child {
+    z-index: 103;
+  }
+}
+
+@media (min-width: 861px) and (max-width: 900px) {
+  .data-table thead th {
+    position: sticky;
+    top: var(--sticky-content-offset);
+  }
+}
+
+/* 0.8.0 – Mobile Parzellenansicht */
+.plot-mobile-controls,
+.plot-card-list {
+  display: none;
+}
+
+@media (max-width: 767px) {
+  #plots .plots-table-region {
+    display: none;
+  }
+
+  .plot-mobile-controls {
+    display: grid;
+    gap: 12px;
+    margin: 0 0 14px;
+    padding: 14px;
+    background: #fff;
+    border: 1px solid #e2e6e3;
+    border-radius: 10px;
+  }
+
+  .plot-mobile-controls label {
+    display: grid;
+    gap: 5px;
+    min-width: 0;
+  }
+
+  .plot-mobile-controls label > span {
+    color: #5d665f;
+    font-size: 12px;
+    font-weight: 600;
+  }
+
+  .plot-mobile-controls input,
+  .plot-mobile-controls select {
+    width: 100%;
+    min-width: 0;
+    min-height: 42px;
+    padding: 9px 10px;
+    border: 1px solid #cbd2cd;
+    border-radius: 8px;
+    background: #fff;
+    color: inherit;
+    font: inherit;
+  }
+
+  .plot-search input {
+    font-size: 16px;
+  }
+
+  .plot-filter-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
+
+  .plot-result-count {
+    color: #6b746e;
+    font-size: 12px;
+  }
+
+  .plot-card-list {
+    display: grid;
+    gap: 12px;
+  }
+
+  .plot-card,
+  .plot-empty {
+    width: 100%;
+    min-width: 0;
+    padding: 14px;
+    background: #fff;
+    border: 1px solid #e1e5e2;
+    border-radius: 10px;
+  }
+
+  .plot-card__head {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 12px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid #edf0ee;
+  }
+
+  .plot-card__head h3 {
+    margin: 0;
+    color: #28312b;
+    font-size: 17px;
+    line-height: 1.25;
+  }
+
+  .plot-card__way {
+    flex: 0 1 auto;
+    min-width: 0;
+    color: #657069;
+    font-size: 12px;
+    text-align: right;
+  }
+
+  .plot-card__facts {
+    display: grid;
+    gap: 8px;
+    margin: 12px 0 0;
+  }
+
+  .plot-card__facts > div {
+    display: grid;
+    grid-template-columns: minmax(92px, 0.42fr) minmax(0, 1fr);
+    gap: 10px;
+    align-items: start;
+  }
+
+  .plot-card__facts dt,
+  .plot-card__facts dd {
+    margin: 0;
+  }
+
+  .plot-card__facts dt {
+    color: #717a74;
+    font-size: 12px;
+    font-weight: 600;
+  }
+
+  .plot-card__facts dd {
+    min-width: 0;
+    overflow-wrap: anywhere;
+    color: #2f3732;
+    font-size: 14px;
+  }
+
+  .plot-card__actions {
+    display: flex;
+    justify-content: flex-end;
+    margin-top: 14px;
+  }
+
+  .plot-card__actions button {
+    min-width: 118px;
+  }
+}
+
+@media (min-width: 768px) {
+  #plots .plots-table-region {
+    display: block;
+  }
+}
+
+
+/* ============================================================
+   0.8.1 – Stabiler Sticky-Tabellenkopf und identisches Spaltenraster
+   ============================================================ */
+:root {
+  /* Fallbacks bis JavaScript die realen Größen gemessen hat. */
+  --app-header-height: 31px;
+  --main-nav-height: 31px;
+  --breadcrumb-height: 27px;
+  --sticky-header-offset: calc(
+    var(--app-header-height) +
+    var(--main-nav-height)
+  );
+  --sticky-table-offset: calc(
+    var(--app-header-height) +
+    var(--main-nav-height) +
+    var(--breadcrumb-height)
+  );
+}
+
+.app-header {
+  position: sticky;
+  top: 0;
+  z-index: 1000;
+  background: #fff;
+}
+
+.desktop-menu-panel {
+  z-index: 1100;
+}
+
+@media (min-width: 861px) {
+  .location-shell {
+    position: sticky;
+    top: var(--sticky-header-offset);
+    z-index: 900;
+    background: #fff;
+  }
+}
+
+html {
+  scroll-padding-top: calc(var(--sticky-table-offset) + 12px);
+}
+
+main section,
+[id] {
+  scroll-margin-top: calc(var(--sticky-table-offset) + 12px);
+}
+
+/* Kein vertikaler Scrollcontainer auf Desktop: Sticky bezieht sich auf die Seite. */
+@media (min-width: 901px) {
+  .table-scroll,
+  .wide {
+    overflow: visible;
+  }
+}
+
+.data-table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+}
+
+.data-table thead th {
+  position: sticky;
+  top: var(--sticky-table-offset);
+  z-index: 20;
+  height: 42px;
+  padding: 0 12px;
+  vertical-align: middle;
+  background: #eef1ef;
+  border-bottom: 1px solid #d9dfdb;
+  box-shadow: 0 1px 0 rgba(0, 0, 0, 0.06);
+  color: #3f4842;
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.2;
+}
+
+.data-table tbody td {
+  padding-right: 12px;
+  padding-left: 12px;
+}
+
+/* Parzellen: Header und Body teilen exakt dasselbe colgroup-Raster. */
+.plot-table {
+  table-layout: fixed;
+  min-width: 930px;
+}
+
+.plot-table .plot-col-parzelle { width: 160px; }
+.plot-table .plot-col-weg { width: 130px; }
+.plot-table .plot-col-versorgung { width: 160px; }
+.plot-table .plot-col-koordinate { width: 190px; }
+.plot-table .plot-col-unterpacht { width: 170px; }
+.plot-table .plot-col-actions { width: 120px; }
+
+.plot-table .col-parzelle,
+.plot-table .col-weg,
+.plot-table .col-versorgung,
+.plot-table .col-koordinate,
+.plot-table .col-unterpacht,
+.plot-table .col-actions {
+  min-width: 0;
+}
+
+.data-table .col-actions,
+.data-table th:last-child,
+.data-table td:last-child:not([colspan]) {
+  width: 120px;
+  min-width: 120px;
+}
+
+/* Tablet: nur die Tabelle darf horizontal scrollen. */
+@media (max-width: 900px) {
+  .table-scroll {
+    width: 100%;
+    max-width: 100%;
+    overflow-x: auto;
+    overflow-y: visible;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .data-table {
+    min-width: 850px;
+  }
+
+  .plot-table {
+    min-width: 930px;
+  }
+
+  .data-table th:last-child,
+  .data-table td:last-child:not([colspan]) {
+    position: sticky;
+    right: 0;
+    z-index: 22;
+    background: #fff;
+    box-shadow: -1px 0 0 #dfe3e1;
+  }
+
+  .data-table thead th:last-child {
+    top: var(--sticky-table-offset);
+    z-index: 24;
+    background: #eef1ef;
+  }
+}
+
+/* Mobil ist Breadcrumb nicht sticky; der Tabellenkopf sitzt direkt unter
+   der kompakten App-Leiste. Die Parzellenansicht selbst nutzt unter 768px
+   ohnehin Karten. */
+@media (max-width: 860px) {
+  .location-shell {
+    position: static;
+  }
+
+  .data-table thead th {
+    top: var(--app-header-height);
+  }
+
+  .data-table thead th:last-child {
+    top: var(--app-header-height);
+  }
+
+  html {
+    scroll-padding-top: calc(var(--app-header-height) + 12px);
+  }
+
+  main section,
+  [id] {
+    scroll-margin-top: calc(var(--app-header-height) + 12px);
+  }
+}
+
+/* ============================================================
+   0.8.2 – Semantische Versorgungsanzeige mit SVG-Icons
+   ============================================================ */
+.supply-list {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 12px;
+  min-width: 0;
+}
+
+.supply-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  color: inherit;
+  white-space: nowrap;
+}
+
+.supply-icon {
+  width: 14px;
+  height: 14px;
+  flex: 0 0 14px;
+  color: currentColor;
+}
+
+.supply-empty {
+  color: var(--muted, #6b746e);
+}
+
+@media (max-width: 767px) {
+  .plot-card__facts dd .supply-list {
+    display: flex;
+    gap: 7px 12px;
+  }
+
+  .plot-card__facts dd .supply-item {
+    font-weight: 500;
   }
 }
