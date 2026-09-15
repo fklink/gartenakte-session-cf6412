@@ -13,7 +13,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="robots" content="noindex,nofollow">
 
-  <title>Gartenakte 0.5.0</title>
+  <title>Gartenakte 0.7.0</title>
 
   <meta name="theme-color" content="#1f6f43">
   <meta name="apple-mobile-web-app-capable" content="yes">
@@ -33,20 +33,37 @@
       <img src="icons/icon-192.png" alt="" class="drawer-logo">
       <div>
         <strong>Gartenakte</strong>
-        <span>Version 0.5.0</span>
+        <span>Version 0.7.0</span>
       </div>
       <button id="drawerCloseBtn" class="icon-button drawer-close" type="button" aria-label="Menü schließen">×</button>
     </div>
 
-    <nav class="drawer-nav">
+    <nav class="drawer-nav grouped-nav">
       <button data-tab="dashboard" class="drawer-tab active"><span class="menu-icon">⌂</span>Übersicht</button>
-      <button data-tab="people" class="drawer-tab"><span class="menu-icon">◉</span>Personen</button>
-      <button data-tab="addresses" class="drawer-tab"><span class="menu-icon">⌖</span>Adressen</button>
-      <button data-tab="plots" class="drawer-tab"><span class="menu-icon">▦</span>Parzellen</button>
-      <button data-tab="land" class="drawer-tab"><span class="menu-icon">▤</span>Flächen &amp; Verträge</button>
-      <button data-tab="leases" class="drawer-tab"><span class="menu-icon">⇄</span>Pachtverhältnisse</button>
       <button data-tab="cases" class="drawer-tab"><span class="menu-icon">✓</span>Vorgänge</button>
-      <button data-tab="backup" class="drawer-tab"><span class="menu-icon">↓</span>Sicherung/Export</button>
+
+      <div class="nav-group-label">Mitglieder &amp; Personen</div>
+      <button data-tab="people" class="drawer-tab subitem">Personen</button>
+      <button data-tab="addresses" class="drawer-tab subitem">Adressen</button>
+      <button data-tab="memberships" class="drawer-tab subitem">Mitgliedschaften</button>
+      <button data-tab="leases" class="drawer-tab subitem">Unterpachtverhältnisse</button>
+
+      <div class="nav-group-label">Verträge</div>
+      <button data-tab="contracts" class="drawer-tab subitem">Verträge &amp; Vertragspartner</button>
+
+      <div class="nav-group-label">Anlage &amp; Inventar</div>
+      <button data-tab="plots" class="drawer-tab subitem">Parzellen</button>
+      <button data-tab="landparcels" class="drawer-tab subitem">Flurstücke</button>
+      <button data-tab="ways" class="drawer-tab subitem">Wege</button>
+      <button data-tab="gates" class="drawer-tab subitem">Außentore</button>
+      <button data-tab="panels" class="drawer-tab subitem">Unterverteilungen</button>
+      <button data-tab="valves" class="drawer-tab subitem">Wasserschieber</button>
+      <button data-tab="meters" class="drawer-tab subitem">Zähler</button>
+      <button data-tab="powerlines" class="drawer-tab subitem">Stromleitungen</button>
+      <button data-tab="waterlines" class="drawer-tab subitem">Wasserleitungen</button>
+
+      <div class="nav-group-label">System</div>
+      <button data-tab="backup" class="drawer-tab subitem">Import &amp; Export</button>
     </nav>
 
     <div class="drawer-footer">
@@ -61,7 +78,7 @@
       <img src="icons/icon-192.png" alt="" class="app-logo">
       <div class="mobile-title">
         <strong>Gartenakte</strong>
-        <span>v0.5.0</span>
+        <span>v0.7.0</span>
       </div>
     </div>
 
@@ -69,22 +86,20 @@
       <div class="desktop-brand">
         <img src="icons/icon-192.png" alt="" class="app-logo">
         <div>
-          <h1>Gartenakte <span class="badge">v0.5.0</span></h1>
-          <small>Lokales Provisorium · getrennte Personen-, Adress-, Parzellen- und Flächendaten</small>
+          <h1>Gartenakte <span class="badge">v0.7.0</span></h1>
+          <small>Lokale Vereinsverwaltung · Personen, Mitgliedschaften, Verträge, Vorgänge und Anlage</small>
         </div>
       </div>
 
-      <nav class="desktop-nav">
-        <button data-tab="dashboard" class="active">Übersicht</button>
-        <button data-tab="people">Personen</button>
-        <button data-tab="addresses">Adressen</button>
-        <button data-tab="plots">Parzellen</button>
-        <button data-tab="land">Flächen &amp; Verträge</button>
-        <button data-tab="leases">Pachtverhältnisse</button>
-        <button data-tab="cases">Vorgänge</button>
-        <button data-tab="backup">Sicherung/Export</button>
-        <button class="install-app-btn" type="button" hidden>App installieren</button>
-        <a class="btn" href="qr.html">Link teilen</a>
+      <nav class="desktop-nav grouped-desktop-nav">
+        <div class="desktop-nav-primary">
+          <button data-tab="dashboard" class="active">Übersicht</button>
+          <button data-tab="cases">Vorgänge</button>
+        </div>
+        <div class="desktop-nav-group"><span>Mitglieder &amp; Personen</span><div><button data-tab="people">Personen</button><button data-tab="addresses">Adressen</button><button data-tab="memberships">Mitgliedschaften</button><button data-tab="leases">Unterpachtverhältnisse</button></div></div>
+        <div class="desktop-nav-group"><span>Verträge</span><div><button data-tab="contracts">Verträge &amp; Partner</button></div></div>
+        <div class="desktop-nav-group"><span>Anlage &amp; Inventar</span><div><button data-tab="plots">Parzellen</button><button data-tab="landparcels">Flurstücke</button><button data-tab="ways">Wege</button><button data-tab="gates">Außentore</button><button data-tab="panels">Unterverteilungen</button><button data-tab="valves">Wasserschieber</button><button data-tab="meters">Zähler</button><button data-tab="powerlines">Stromleitungen</button><button data-tab="waterlines">Wasserleitungen</button></div></div>
+        <div class="desktop-nav-group"><span>System</span><div><button data-tab="backup">Import &amp; Export</button><button class="install-app-btn" type="button" hidden>App installieren</button><a class="btn" href="qr.html">QR / Link teilen</a></div></div>
       </nav>
     </div>
   </header>
@@ -97,12 +112,21 @@
     </div>
 
     <section id="dashboard"></section>
+    <section id="cases" class="hidden"></section>
     <section id="people" class="hidden"></section>
     <section id="addresses" class="hidden"></section>
-    <section id="plots" class="hidden"></section>
-    <section id="land" class="hidden"></section>
+    <section id="memberships" class="hidden"></section>
     <section id="leases" class="hidden"></section>
-    <section id="cases" class="hidden"></section>
+    <section id="contracts" class="hidden"></section>
+    <section id="plots" class="hidden"></section>
+    <section id="landparcels" class="hidden"></section>
+    <section id="ways" class="hidden"></section>
+    <section id="gates" class="hidden"></section>
+    <section id="panels" class="hidden"></section>
+    <section id="valves" class="hidden"></section>
+    <section id="meters" class="hidden"></section>
+    <section id="powerlines" class="hidden"></section>
+    <section id="waterlines" class="hidden"></section>
     <section id="backup" class="hidden"></section>
   </main>
 

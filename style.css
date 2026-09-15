@@ -537,3 +537,114 @@ body.menu-open {
     display: none;
   }
 }
+
+
+/* 0.6.0 – Infrastruktur */
+fieldset {
+  min-width: 0;
+  margin: 0;
+  padding: 14px;
+  border: 1px solid #d8dfda;
+  border-radius: 10px;
+}
+
+legend {
+  padding: 0 6px;
+  font-weight: 700;
+}
+
+.checkline {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  min-height: 42px;
+}
+
+.checkline input {
+  width: 18px;
+  height: 18px;
+}
+
+.inventory-summary {
+  margin-top: 14px;
+}
+
+@media (max-width: 760px) {
+  #inventory table,
+  #plots table {
+    min-width: 760px;
+  }
+
+  #inventory .wide,
+  #plots .wide {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+}
+
+/* 0.7.0 – gruppierte Fachnavigation */
+.nav-group-label {
+  margin: 14px 10px 4px;
+  color: #66736b;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+}
+
+.drawer-nav button.subitem {
+  min-height: 40px;
+  padding-left: 20px;
+}
+
+.grouped-desktop-nav {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+  gap: 10px;
+  align-items: start;
+}
+
+.desktop-nav-primary,
+.desktop-nav-group {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 8px;
+  border: 1px solid #e1e6e2;
+  border-radius: 10px;
+  background: #fafbfa;
+}
+
+.desktop-nav-primary {
+  align-content: flex-start;
+}
+
+.desktop-nav-group > span {
+  width: 100%;
+  padding: 0 3px 3px;
+  color: #66736b;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+}
+
+.desktop-nav-group > div {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.desktop-nav-primary button,
+.desktop-nav-group button,
+.desktop-nav-group .btn {
+  min-height: 36px;
+  padding: 7px 10px;
+  font-size: 13px;
+}
+
+@media (max-width: 1100px) and (min-width: 861px) {
+  .grouped-desktop-nav {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}

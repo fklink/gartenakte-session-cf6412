@@ -1,6 +1,6 @@
 'use strict';
 
-const CACHE_NAME = 'gartenakte-v0.5.0';
+const CACHE_NAME = 'gartenakte-v0.7.0';
 const APP_SHELL = [
   './index.html?share=b11e91',
   './style.css',
