@@ -3,6 +3,24 @@
 Alle relevanten Änderungen an der Gartenakte werden in dieser Datei dokumentiert.
 Die Versionsnummern folgen Semantic Versioning (`MAJOR.MINOR.PATCH`).
 
+## 0.9.6 – 2026-09-16
+
+### Hinzugefügt
+
+- Responsive Stromzählerkarten unterhalb von 768 px.
+- Gemeinsame Suche, Filter und Sortierung für Desktop-Tabelle und mobile Karten.
+- Suche über BMK, Bezeichnung, Zählernummer, Zählstellennummer, Parzelle und übergeordnetes Inventarobjekt.
+- Filter nach Status, Parzelle sowie vorhandener/fehlender Zähler- bzw. Zählstellennummer.
+- Sortierung nach BMK, Bezeichnung sowie Datum der letzten Ablesung.
+- Trefferanzeige „x von y Zählern“.
+- Mobile Kartenansicht für Ablesungen.
+- Sichtbare Schließen-Funktion im Ablesungsdialog und ×-Schaltfläche im Dialogkopf.
+
+### Behoben
+
+- Esc bzw. × können geänderte Formulare nicht mehr unbemerkt schließen; vor dem Verwerfen erfolgt eine Rückfrage.
+- Im aktiven Ablesungsformular bleiben „Speichern“ und „Abbrechen“ klar getrennte Aktionen.
+
 ## 0.9.5 – 2026-09-16
 
 ### Behoben

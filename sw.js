@@ -1,6 +1,6 @@
 'use strict';
 
-const CACHE_NAME = 'gartenakte-v0.9.5-osm-boundary-gates';
+const CACHE_NAME = 'gartenakte-v0.9.6-responsive-meters';
 const APP_SHELL = [
   './index.html?share=b11e91',
   './style.css',

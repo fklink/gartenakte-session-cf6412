@@ -1,5 +1,5 @@
 'use strict';
-const APP_VERSION = '0.9.5', KEY = 'gartenakte_data', OLD_KEYS = ['gartenakte_1_0_0_data'];
+const APP_VERSION = '0.9.6', KEY = 'gartenakte_data', OLD_KEYS = ['gartenakte_1_0_0_data'];
 let db = load();
 
 const plotViewState = {
@@ -8,6 +8,16 @@ const plotViewState = {
   supply: '',
   sort: 'number-asc'
 };
+
+const powerMeterViewState = {
+  search: '',
+  status: '',
+  plotId: '',
+  numberFilter: '',
+  sort: 'bmk-asc'
+};
+
+let dialogHasUnsavedChanges = false;
 
 function fresh() {
   return {
@@ -380,6 +390,15 @@ document.addEventListener('keydown', event => {
   if (event.key === 'Escape') {
     closeMenu();
   }
+});
+
+document.getElementById('dlg')?.addEventListener('cancel', event => {
+  if (!dialogHasUnsavedChanges) return;
+  event.preventDefault();
+  requestDialogClose();
+});
+document.getElementById('dlg')?.addEventListener('close', () => {
+  dialogHasUnsavedChanges = false;
 });
 
 // Sticky-Abstände werden in 0.7.9 bewusst statisch aus dem festen Desktop-Layout abgeleitet.
@@ -1464,9 +1483,166 @@ function renderWays() {
 
 function renderInventory() {}
 
+function powerMeterPlots(meterId) {
+  return db.plots.filter(p => p.electricMeterId === meterId);
+}
+
+function powerMeterSearchText(meter) {
+  const plots = powerMeterPlots(meter.id).map(p => plotName(p.id)).join(' ');
+  return [
+    meter.bmk,
+    meter.name,
+    meter.meterNumber,
+    meter.meteringPointNumber,
+    plots,
+    inventoryName(meter.parentId)
+  ].filter(Boolean).join(' ').toLocaleLowerCase('de');
+}
+
+function filteredPowerMeters() {
+  const query = powerMeterViewState.search.trim().toLocaleLowerCase('de');
+  let items = db.inventory.filter(i => i.type === 'Stromzähler').map(ensureInventoryGeoFields);
+
+  if (query) items = items.filter(i => powerMeterSearchText(i).includes(query));
+  if (powerMeterViewState.status) items = items.filter(i => (i.status || '') === powerMeterViewState.status);
+  if (powerMeterViewState.plotId) items = items.filter(i => powerMeterPlots(i.id).some(p => p.id === powerMeterViewState.plotId));
+
+  if (powerMeterViewState.numberFilter === 'with-meter-number') items = items.filter(i => Boolean((i.meterNumber || '').trim()));
+  if (powerMeterViewState.numberFilter === 'without-meter-number') items = items.filter(i => !Boolean((i.meterNumber || '').trim()));
+  if (powerMeterViewState.numberFilter === 'with-metering-point') items = items.filter(i => Boolean((i.meteringPointNumber || '').trim()));
+  if (powerMeterViewState.numberFilter === 'without-metering-point') items = items.filter(i => !Boolean((i.meteringPointNumber || '').trim()));
+
+  const collator = new Intl.Collator('de', { numeric: true, sensitivity: 'base' });
+  const compareBmk = (a, b) => collator.compare(a.bmk || a.name || '', b.bmk || b.name || '');
+  const compareLatest = (a, b, direction) => {
+    const da = meterLatestReading(a.id)?.date || '';
+    const dbb = meterLatestReading(b.id)?.date || '';
+    if (!da && !dbb) return compareBmk(a, b);
+    if (!da) return 1;
+    if (!dbb) return -1;
+    const cmp = da.localeCompare(dbb);
+    return (direction === 'desc' ? -cmp : cmp) || compareBmk(a, b);
+  };
+
+  items.sort((a, b) => {
+    switch (powerMeterViewState.sort) {
+      case 'bmk-desc': return -compareBmk(a, b);
+      case 'name': return collator.compare(a.name || '', b.name || '') || compareBmk(a, b);
+      case 'latest-desc': return compareLatest(a, b, 'desc');
+      case 'latest-asc': return compareLatest(a, b, 'asc');
+      default: return compareBmk(a, b);
+    }
+  });
+  return items;
+}
+
+function powerMeterGeometryText(meter) {
+  const geomObj = legacyGeometry(meter, 'inventory');
+  return geomObj ? `${geomObj.type} · ${geometryPointCount(geomObj)} Punkt(e)` : '–';
+}
+
+function powerMeterLatestText(meter) {
+  const latest = meterLatestReading(meter.id);
+  return latest ? `${esc(latest.date || '–')} · <b>${esc(latest.value)}</b> ${esc(meter.unit || '')}` : '–';
+}
+
+function powerMeterTableRows(items) {
+  if (!items.length) return '<tr><td colspan="10" class="muted">Keine Stromzähler entsprechen der aktuellen Auswahl.</td></tr>';
+  return items.map(i => {
+    const plots = powerMeterPlots(i.id);
+    return `<tr><td>${esc(i.type)}</td><td><b>${esc(i.bmk || '–')}</b><br>${esc(i.name || '')}</td><td>${esc(i.meterNumber || '–')}</td><td>${esc(i.meteringPointNumber || '–')}</td><td>${powerMeterLatestText(i)}</td><td>${esc(inventoryName(i.parentId))}</td><td>${esc(powerMeterGeometryText(i))}</td><td>${esc(i.status || '–')}</td><td>${plots.map(p => esc(plotName(p.id))).join(', ') || '–'}</td><td><button type="button" onclick="showMeterReadings('${i.id}')">Ablesungen</button> <button type="button" onclick="editInventory('${i.id}')">Bearbeiten</button></td></tr>`;
+  }).join('');
+}
+
+function powerMeterCards(items) {
+  if (!items.length) return '<div class="meter-empty muted">Keine Stromzähler entsprechen der aktuellen Auswahl.</div>';
+  return items.map(i => {
+    const plots = powerMeterPlots(i.id);
+    const latest = meterLatestReading(i.id);
+    const latestText = latest ? `${esc(latest.date || '–')} · ${esc(latest.value)} ${esc(i.unit || '')}` : '–';
+    return `<article class="meter-card">
+      <header class="meter-card__head">
+        <div>
+          <div class="meter-card__bmk">${esc(i.bmk || '–')}</div>
+          <div class="meter-card__name">${esc(i.name || 'Stromzähler')}</div>
+        </div>
+        <span class="badge">${esc(i.status || '–')}</span>
+      </header>
+      <dl class="meter-card__facts">
+        <div><dt>Zählernummer</dt><dd>${esc(i.meterNumber || '–')}</dd></div>
+        <div><dt>Zählstellennummer</dt><dd>${esc(i.meteringPointNumber || '–')}</dd></div>
+        <div><dt>Letzte Ablesung</dt><dd>${latestText}</dd></div>
+        <div><dt>Parzelle${plots.length === 1 ? '' : 'n'}</dt><dd>${plots.map(p => esc(plotName(p.id))).join(', ') || '–'}</dd></div>
+        <div><dt>Übergeordnet</dt><dd>${esc(inventoryName(i.parentId))}</dd></div>
+      </dl>
+      <div class="meter-card__actions"><button type="button" onclick="showMeterReadings('${i.id}')">Ablesungen</button><button type="button" onclick="editInventory('${i.id}')">Bearbeiten</button></div>
+    </article>`;
+  }).join('');
+}
+
+function setPowerMeterViewState(key, value) {
+  powerMeterViewState[key] = value;
+  updatePowerMeterView();
+}
+
+function updatePowerMeterView() {
+  const items = filteredPowerMeters();
+  const tbody = document.querySelector('#powerMeterTableBody');
+  const cards = document.querySelector('#powerMeterCardList');
+  const count = document.querySelector('#powerMeterResultCount');
+  if (tbody) tbody.innerHTML = powerMeterTableRows(items);
+  if (cards) cards.innerHTML = powerMeterCards(items);
+  if (count) count.textContent = `${items.length} von ${db.inventory.filter(i => i.type === 'Stromzähler').length} Zählern`;
+  enhanceResponsiveTables();
+}
+
+function renderPowerMeters(section) {
+  const allMeters = db.inventory.filter(i => i.type === 'Stromzähler').map(ensureInventoryGeoFields);
+  const items = filteredPowerMeters();
+  const statuses = [...new Set(allMeters.map(i => i.status).filter(Boolean))].sort((a,b)=>a.localeCompare(b,'de'));
+  const linkedPlots = db.plots.filter(p => p.electricMeterId && allMeters.some(i => i.id === p.electricMeterId))
+    .sort((a,b) => String(a.number).localeCompare(String(b.number), 'de', { numeric: true }));
+
+  section.innerHTML = `
+    <div class="actions"><button class="primary" onclick="editInventory(null, 'Stromzähler')">+ Stromzähler</button></div>
+
+    <div class="plot-controls meter-controls" aria-label="Stromzähler suchen, filtern und sortieren">
+      <label class="plot-search meter-search">
+        <span>Zähler suchen</span>
+        <input type="search" value="${esc(powerMeterViewState.search)}" placeholder="BMK, Bezeichnung, Nummer, Parzelle …" oninput="setPowerMeterViewState('search', this.value)">
+      </label>
+      <div class="plot-filter-grid meter-filter-grid">
+        <label><span>Status</span><select onchange="setPowerMeterViewState('status', this.value)"><option value="">Alle Status</option>${statuses.map(status => `<option value="${esc(status)}" ${status === powerMeterViewState.status ? 'selected' : ''}>${esc(status)}</option>`).join('')}</select></label>
+        <label><span>Parzelle</span><select onchange="setPowerMeterViewState('plotId', this.value)"><option value="">Alle Parzellen</option>${linkedPlots.map(p => `<option value="${p.id}" ${p.id === powerMeterViewState.plotId ? 'selected' : ''}>${esc(plotName(p.id))}</option>`).join('')}</select></label>
+        <label><span>Nummern</span><select onchange="setPowerMeterViewState('numberFilter', this.value)">
+          <option value="" ${powerMeterViewState.numberFilter === '' ? 'selected' : ''}>Alle</option>
+          <option value="with-meter-number" ${powerMeterViewState.numberFilter === 'with-meter-number' ? 'selected' : ''}>Mit Zählernummer</option>
+          <option value="without-meter-number" ${powerMeterViewState.numberFilter === 'without-meter-number' ? 'selected' : ''}>Ohne Zählernummer</option>
+          <option value="with-metering-point" ${powerMeterViewState.numberFilter === 'with-metering-point' ? 'selected' : ''}>Mit Zählstellennummer</option>
+          <option value="without-metering-point" ${powerMeterViewState.numberFilter === 'without-metering-point' ? 'selected' : ''}>Ohne Zählstellennummer</option>
+        </select></label>
+        <label><span>Sortierung</span><select onchange="setPowerMeterViewState('sort', this.value)">
+          <option value="bmk-asc" ${powerMeterViewState.sort === 'bmk-asc' ? 'selected' : ''}>BMK aufsteigend</option>
+          <option value="bmk-desc" ${powerMeterViewState.sort === 'bmk-desc' ? 'selected' : ''}>BMK absteigend</option>
+          <option value="name" ${powerMeterViewState.sort === 'name' ? 'selected' : ''}>Bezeichnung</option>
+          <option value="latest-desc" ${powerMeterViewState.sort === 'latest-desc' ? 'selected' : ''}>Letzte Ablesung: neueste zuerst</option>
+          <option value="latest-asc" ${powerMeterViewState.sort === 'latest-asc' ? 'selected' : ''}>Letzte Ablesung: älteste zuerst</option>
+        </select></label>
+      </div>
+      <div id="powerMeterResultCount" class="plot-result-count">${items.length} von ${allMeters.length} Zählern</div>
+    </div>
+
+    <div class="card wide powermeter-table-region"><table class="powermeter-table"><thead><tr><th>Typ</th><th>BMK / Bezeichnung</th><th>Zählernummer</th><th>Zählstellennummer</th><th>Letzte Ablesung</th><th>Übergeordnet</th><th>Ort / Geometrie</th><th>Status</th><th>Parzellen</th><th></th></tr></thead><tbody id="powerMeterTableBody">${powerMeterTableRows(items)}</tbody></table></div>
+    <div id="powerMeterCardList" class="meter-card-list">${powerMeterCards(items)}</div>`;
+}
+
 function renderInventoryCategory(sectionId, title, types) {
   const section = document.querySelector(`#${sectionId}`);
   if (!section) return;
+  if (sectionId === 'powermeters') {
+    renderPowerMeters(section);
+    return;
+  }
   const items = db.inventory.filter(i => types.includes(i.type));
   const meterView = types.length === 1 && ['Wasserzähler', 'Stromzähler'].includes(types[0]);
   const meterHeaders = meterView ? '<th>Zählernummer</th><th>Zählstellennummer</th><th>Letzte Ablesung</th>' : '';
@@ -1487,11 +1663,40 @@ function renderInventoryCategory(sectionId, title, types) {
     </tbody></table></div>`;
 }
 
+function meterReadingTableRows(meter, readings) {
+  return readings.map(r => {
+    const usage = meterReadingUsage(meter.id, r.id);
+    return `<tr><td>${esc(r.date || '–')}</td><td><b>${esc(r.value)}</b> ${esc(meter.unit || '')}</td><td>${usage === null ? '–' : `${esc(usage.toLocaleString('de-DE'))} ${esc(meter.unit || '')}`}</td><td>${esc(r.readingType || 'manuell')}</td><td>${esc(r.note || '–')}</td><td>${r.photoData ? `<a href="${r.photoData}" target="_blank" rel="noopener">Foto</a>` : '–'}</td><td><button type="button" onclick="editMeterReading('${meter.id}','${r.id}')">Bearbeiten</button></td></tr>`;
+  }).join('') || '<tr><td colspan="7" class="muted">Noch keine Ablesungen.</td></tr>';
+}
+
+function meterReadingCards(meter, readings) {
+  if (!readings.length) return '<div class="reading-empty muted">Noch keine Ablesungen.</div>';
+  return readings.map(r => {
+    const usage = meterReadingUsage(meter.id, r.id);
+    return `<article class="reading-card">
+      <header class="reading-card__head"><b>${esc(r.date || '–')}</b><button type="button" onclick="editMeterReading('${meter.id}','${r.id}')">Bearbeiten</button></header>
+      <dl class="reading-card__facts">
+        <div><dt>Stand</dt><dd><b>${esc(r.value)}</b> ${esc(meter.unit || '')}</dd></div>
+        <div><dt>Verbrauch</dt><dd>${usage === null ? '–' : `${esc(usage.toLocaleString('de-DE'))} ${esc(meter.unit || '')}`}</dd></div>
+        <div><dt>Art</dt><dd>${esc(r.readingType || 'manuell')}</dd></div>
+        <div><dt>Bemerkung</dt><dd>${esc(r.note || '–')}</dd></div>
+        <div><dt>Foto</dt><dd>${r.photoData ? `<a href="${r.photoData}" target="_blank" rel="noopener">vorhanden</a>` : '–'}</dd></div>
+      </dl>
+    </article>`;
+  }).join('');
+}
+
 function showMeterReadings(meterId) {
   const meter = byId(db.inventory, meterId);
   if (!meter || !isMeter(meter)) return;
-  const readings = [...db.meterReadings].filter(r => r.meterId === meterId).sort((a,b) => String(b.date || '').localeCompare(String(a.date || '')));
-  showDialog(`Ablesungen · ${inventoryName(meterId)}`, `<div class="actions"><button class="primary" type="button" onclick="editMeterReading('${meterId}')">+ Zählerstand erfassen</button><button type="button" onclick="editInventory('${meterId}')">Zähler bearbeiten</button></div><div class="table-scroll"><table class="data-table"><thead><tr><th>Datum</th><th>Stand</th><th>Verbrauch</th><th>Art</th><th>Bemerkung</th><th>Foto</th><th></th></tr></thead><tbody>${readings.map(r => { const usage = meterReadingUsage(meterId, r.id); return `<tr><td>${esc(r.date || '–')}</td><td><b>${esc(r.value)}</b> ${esc(meter.unit || '')}</td><td>${usage === null ? '–' : `${esc(usage.toLocaleString('de-DE'))} ${esc(meter.unit || '')}`}</td><td>${esc(r.readingType || 'manuell')}</td><td>${esc(r.note || '–')}</td><td>${r.photoData ? `<a href="${r.photoData}" target="_blank" rel="noopener">Foto</a>` : '–'}</td><td><button type="button" onclick="editMeterReading('${meterId}','${r.id}')">Bearbeiten</button></td></tr>`; }).join('') || '<tr><td colspan="7" class="muted">Noch keine Ablesungen.</td></tr>'}</tbody></table></div>`);
+  const readings = [...db.meterReadings].filter(r => r.meterId === meterId).sort((a,b) => String(b.date || '').localeCompare(String(a.date || '')) || String(b.createdAt || '').localeCompare(String(a.createdAt || '')));
+  showDialog(`Ablesungen · ${inventoryName(meterId)}`, `
+    <div class="actions reading-toolbar"><button class="primary" type="button" onclick="editMeterReading('${meterId}')">+ Zählerstand erfassen</button><button type="button" onclick="editInventory('${meterId}')">Zähler bearbeiten</button></div>
+    <div class="reading-table-region"><table class="data-table"><thead><tr><th>Datum</th><th>Stand</th><th>Verbrauch</th><th>Art</th><th>Bemerkung</th><th>Foto</th><th></th></tr></thead><tbody>${meterReadingTableRows(meter, readings)}</tbody></table></div>
+    <div class="reading-card-list">${meterReadingCards(meter, readings)}</div>
+    <div class="dialog-footer-actions"><button type="button" onclick="requestDialogClose()">Schließen</button></div>`);
+  enhanceResponsiveTables();
 }
 
 function editMeterReading(meterId, readingId) {
@@ -1506,6 +1711,7 @@ function editMeterReading(meterId, readingId) {
     const file = document.getElementById('meterReadingPhoto').files[0];
     if (file) { o.photoName = file.name; o.photoType = file.type; o.photoData = await fileToDataURL(file); }
     r.id ? Object.assign(r, o) : db.meterReadings.push(o);
+    dialogHasUnsavedChanges = false;
     save();
     showMeterReadings(meterId);
   };
@@ -1595,7 +1801,24 @@ function caseTable(items, actions) {
     </table>
   `;
 }
-function showDialog(title, html) { dlgTitle.textContent = title; dlgBody.innerHTML = html; dlg.showModal(); }
+function requestDialogClose() {
+  if (dialogHasUnsavedChanges && !confirm('Ungespeicherte Änderungen verwerfen und Dialog schließen?')) return false;
+  dialogHasUnsavedChanges = false;
+  dlg.close();
+  return true;
+}
+
+function showDialog(title, html) {
+  dialogHasUnsavedChanges = false;
+  dlgTitle.textContent = title;
+  dlgBody.innerHTML = html;
+  dlgBody.querySelectorAll('form').forEach(form => {
+    const markDirty = () => { dialogHasUnsavedChanges = true; };
+    form.addEventListener('input', markDirty);
+    form.addEventListener('change', markDirty);
+  });
+  dlg.showModal();
+}
 
 function editMembership(id) {
   if (!db.people.length) {

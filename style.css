@@ -2548,3 +2548,196 @@ dialog:has(.osm-preview) {
     padding: 9px 10px;
   }
 }
+
+/* ============================================================
+   0.9.6 – Stromzähler responsiv + Ablesungsdialog
+   ============================================================ */
+.meter-card-list,
+.reading-card-list {
+  display: none;
+}
+
+.meter-controls {
+  grid-template-columns: minmax(230px, 1.15fr) minmax(520px, 2.35fr) auto;
+}
+
+.meter-filter-grid {
+  grid-template-columns: repeat(4, minmax(120px, 1fr));
+}
+
+.dialoghead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.dialog-close {
+  flex: 0 0 auto;
+  width: 34px;
+  height: 34px;
+  padding: 0;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: #59625c;
+  font-size: 24px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.dialog-close:hover,
+.dialog-close:focus-visible {
+  background: #eef2ef;
+  color: #253028;
+}
+
+.dialog-footer-actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 16px;
+  padding-top: 12px;
+  border-top: 1px solid #e7ebe8;
+}
+
+.reading-toolbar {
+  margin-bottom: 12px;
+}
+
+@media (max-width: 1180px) and (min-width: 768px) {
+  .meter-controls {
+    grid-template-columns: minmax(220px, 1fr) minmax(0, 2fr);
+  }
+
+  .meter-filter-grid {
+    grid-template-columns: repeat(2, minmax(150px, 1fr));
+  }
+
+  .meter-controls .plot-result-count {
+    grid-column: 1 / -1;
+  }
+}
+
+@media (max-width: 767px) {
+  #powermeters .powermeter-table-region,
+  .reading-table-region {
+    display: none;
+  }
+
+  .meter-controls {
+    grid-template-columns: 1fr;
+    gap: 12px;
+    padding: 14px;
+  }
+
+  .meter-search input {
+    font-size: 16px;
+  }
+
+  .meter-filter-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .meter-card-list,
+  .reading-card-list {
+    display: grid;
+    gap: 12px;
+  }
+
+  .meter-card,
+  .meter-empty,
+  .reading-card,
+  .reading-empty {
+    width: 100%;
+    min-width: 0;
+    padding: 14px;
+    background: #fff;
+    border: 1px solid #e1e5e2;
+    border-radius: 10px;
+  }
+
+  .meter-card__head,
+  .reading-card__head {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 12px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid #edf0ee;
+  }
+
+  .meter-card__bmk {
+    color: #253028;
+    font-size: 17px;
+    font-weight: 750;
+    line-height: 1.2;
+    overflow-wrap: anywhere;
+  }
+
+  .meter-card__name {
+    margin-top: 3px;
+    color: #657069;
+    font-size: 13px;
+    overflow-wrap: anywhere;
+  }
+
+  .meter-card__facts,
+  .reading-card__facts {
+    display: grid;
+    gap: 8px;
+    margin: 12px 0 0;
+  }
+
+  .meter-card__facts > div,
+  .reading-card__facts > div {
+    display: grid;
+    grid-template-columns: minmax(110px, 0.42fr) minmax(0, 1fr);
+    gap: 10px;
+    align-items: start;
+  }
+
+  .meter-card__facts dt,
+  .meter-card__facts dd,
+  .reading-card__facts dt,
+  .reading-card__facts dd {
+    margin: 0;
+  }
+
+  .meter-card__facts dt,
+  .reading-card__facts dt {
+    color: #717a74;
+    font-size: 12px;
+    font-weight: 600;
+  }
+
+  .meter-card__facts dd,
+  .reading-card__facts dd {
+    min-width: 0;
+    overflow-wrap: anywhere;
+    color: #2f3732;
+    font-size: 14px;
+  }
+
+  .meter-card__actions {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    gap: 8px;
+    margin-top: 14px;
+  }
+
+  .reading-card__head button {
+    flex: 0 0 auto;
+  }
+
+  .dialogbody {
+    overflow-x: hidden;
+  }
+}
+
+@media (min-width: 768px) {
+  #powermeters .powermeter-table-region,
+  .reading-table-region {
+    display: block;
+  }
+}

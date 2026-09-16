@@ -1,4 +1,4 @@
-# Gartenakte 0.9.5
+# Gartenakte 0.9.6
 
 Portable Vereinsverwaltung als Progressive Web App (PWA) für GitHub Pages.
 
@@ -9,6 +9,17 @@ Repository: `gartenakte-session-cf6412`
 Die Dateien dieses Ordners kommen direkt in die oberste Ebene des Repositories. GitHub Pages anschließend aus `main` / `(root)` veröffentlichen.
 
 Der Freigabeparameter ist nur eine einfache Zugangshürde und kein echter Zugriffsschutz. Vereinsdaten werden nicht in GitHub gespeichert, sondern lokal im Browserprofil des jeweiligen Geräts.
+
+## Neu in 0.9.6
+
+- Stromzählerübersicht mit gemeinsamer Suche, Filtern, Sortierung und Trefferzahl für Desktop und Mobil.
+- Unter 768 px werden Stromzähler als kompakte Karten statt als breite Tabelle dargestellt.
+- Suche umfasst BMK, Bezeichnung, Zählernummer, Zählstellennummer, Parzelle und übergeordnete Verteilung.
+- Filter nach Status, Parzelle sowie vorhandener/fehlender Zähler- bzw. Zählstellennummer.
+- Sortierung nach BMK, Bezeichnung und letzter Ablesung.
+- Ablesungsdialog besitzt jetzt eine sichtbare Schließen-Funktion und ein × im Dialogkopf.
+- Ablesungen werden auf schmalen Displays als Karten dargestellt.
+- Ungespeicherte Formulareingaben werden bei × oder Esc nicht mehr stillschweigend verworfen.
 
 ## Neu in 0.9.5
 

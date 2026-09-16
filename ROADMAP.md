@@ -1,6 +1,6 @@
 # ROADMAP – Gartenakte
 
-Aktueller Stand: **0.9.5**
+Aktueller Stand: **0.9.6**
 
 ## 0.9.0 – Karte & Geodaten ✅ umgesetzt
 
