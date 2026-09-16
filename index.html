@@ -13,7 +13,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="robots" content="noindex,nofollow">
 
-  <title>Gartenakte 0.8.2</title>
+  <title>Gartenakte 0.9.5</title>
 
   <meta name="theme-color" content="#1f6f43">
   <meta name="apple-mobile-web-app-capable" content="yes">
@@ -23,6 +23,7 @@
   <link rel="manifest" href="manifest.webmanifest">
   <link rel="icon" type="image/png" href="icons/icon-192.png">
   <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -33,7 +34,7 @@
       <img src="icons/icon-192.png" alt="" class="drawer-logo">
       <div>
         <strong>Gartenakte</strong>
-        <span>Version 0.8.2</span>
+        <span>Version 0.9.5</span>
       </div>
       <button id="drawerCloseBtn" class="icon-button drawer-close" type="button" aria-label="Menü schließen">×</button>
     </div>
@@ -52,15 +53,17 @@
       <button data-tab="contracts" class="drawer-tab subitem">Verträge &amp; Vertragspartner</button>
 
       <div class="nav-group-label">Anlage &amp; Inventar</div>
-      <button data-tab="plots" class="drawer-tab subitem">Parzellen</button>
+      <button data-tab="map" class="drawer-tab subitem">Karte</button>
       <button data-tab="landparcels" class="drawer-tab subitem">Flurstücke</button>
+      <button data-tab="plots" class="drawer-tab subitem">Parzellen</button>
       <button data-tab="ways" class="drawer-tab subitem">Wege</button>
       <button data-tab="gates" class="drawer-tab subitem">Außentore</button>
-      <button data-tab="panels" class="drawer-tab subitem">Unterverteilungen</button>
-      <button data-tab="valves" class="drawer-tab subitem">Wasserschieber</button>
-      <button data-tab="meters" class="drawer-tab subitem">Zähler</button>
-      <button data-tab="powerlines" class="drawer-tab subitem">Stromleitungen</button>
       <button data-tab="waterlines" class="drawer-tab subitem">Wasserleitungen</button>
+      <button data-tab="valves" class="drawer-tab subitem">Absperrschieber</button>
+      <button data-tab="watermeters" class="drawer-tab subitem">Wasserzähler</button>
+      <button data-tab="powerlines" class="drawer-tab subitem">Stromleitungen</button>
+      <button data-tab="panels" class="drawer-tab subitem">Unterverteilungen</button>
+      <button data-tab="powermeters" class="drawer-tab subitem">Stromzähler</button>
 
       <div class="nav-group-label">System</div>
       <button data-tab="backup" class="drawer-tab subitem">Import &amp; Export</button>
@@ -78,7 +81,7 @@
       <img src="icons/icon-192.png" alt="" class="app-logo">
       <div class="mobile-title">
         <strong>Gartenakte</strong>
-        <span>v0.8.2</span>
+        <span>v0.9.5</span>
       </div>
     </div>
 
@@ -89,7 +92,7 @@
           <div class="brand-copy">
             <div class="brand-title-row">
               <h1>Gartenakte</h1>
-              <span class="badge">v0.8.2</span>
+              <span class="badge">v0.9.5</span>
             </div>
             <small>Lokale Vereinsverwaltung</small>
           </div>
@@ -121,15 +124,17 @@
         <details class="desktop-menu">
           <summary>Anlage &amp; Inventar</summary>
           <div class="desktop-menu-panel desktop-menu-panel-wide">
-            <button data-tab="plots">Parzellen</button>
+            <button data-tab="map">Karte</button>
             <button data-tab="landparcels">Flurstücke</button>
+            <button data-tab="plots">Parzellen</button>
             <button data-tab="ways">Wege</button>
             <button data-tab="gates">Außentore</button>
-            <button data-tab="panels">Unterverteilungen</button>
-            <button data-tab="valves">Wasserschieber</button>
-            <button data-tab="meters">Zähler</button>
-            <button data-tab="powerlines">Stromleitungen</button>
             <button data-tab="waterlines">Wasserleitungen</button>
+            <button data-tab="valves">Absperrschieber</button>
+            <button data-tab="watermeters">Wasserzähler</button>
+            <button data-tab="powerlines">Stromleitungen</button>
+            <button data-tab="panels">Unterverteilungen</button>
+            <button data-tab="powermeters">Stromzähler</button>
           </div>
         </details>
 
@@ -167,15 +172,17 @@
     <section id="memberships" class="hidden"></section>
     <section id="leases" class="hidden"></section>
     <section id="contracts" class="hidden"></section>
-    <section id="plots" class="hidden"></section>
+    <section id="map" class="hidden"></section>
     <section id="landparcels" class="hidden"></section>
+    <section id="plots" class="hidden"></section>
     <section id="ways" class="hidden"></section>
     <section id="gates" class="hidden"></section>
-    <section id="panels" class="hidden"></section>
-    <section id="valves" class="hidden"></section>
-    <section id="meters" class="hidden"></section>
-    <section id="powerlines" class="hidden"></section>
     <section id="waterlines" class="hidden"></section>
+    <section id="valves" class="hidden"></section>
+    <section id="watermeters" class="hidden"></section>
+    <section id="powerlines" class="hidden"></section>
+    <section id="panels" class="hidden"></section>
+    <section id="powermeters" class="hidden"></section>
     <section id="backup" class="hidden"></section>
   </main>
 
@@ -184,6 +191,7 @@
     <div class="dialogbody" id="dlgBody"></div>
   </dialog>
 
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <script src="app.js"></script>
   <script src="pwa.js"></script>
 </body>

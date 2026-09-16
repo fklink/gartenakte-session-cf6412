@@ -1,5 +1,5 @@
 'use strict';
-const APP_VERSION = '0.8.2', KEY = 'gartenakte_data', OLD_KEYS = ['gartenakte_1_0_0_data'];
+const APP_VERSION = '0.9.5', KEY = 'gartenakte_data', OLD_KEYS = ['gartenakte_1_0_0_data'];
 let db = load();
 
 const plotViewState = {
@@ -11,7 +11,7 @@ const plotViewState = {
 
 function fresh() {
   return {
-    schema: 4,
+    schema: 6,
     appVersion: APP_VERSION,
     people: [],
     addresses: [],
@@ -29,32 +29,76 @@ function fresh() {
     events: [],
     attachments: [],
     inventory: [],
+    meterReadings: [],
+    leaseAreas: [],
+    mapReferences: [],
+    osmImports: [],
     lessors: [],
     landContracts: [],
     contractParcels: []
   };
 }
 
+function ensureInventoryGeoFields(item) {
+  if (!item || typeof item !== 'object') return item;
+  item.geometry = item.geometry || null;
+  item.meterScope = item.meterScope || '';
+  item.meterNumber = item.meterNumber || '';
+  item.meteringPointNumber = item.meteringPointNumber || '';
+  item.unit = item.unit || (item.type === 'Stromzähler' ? 'kWh' : (item.type === 'Wasserzähler' ? 'm³' : ''));
+  item.installedAt = item.installedAt || '';
+  item.removedAt = item.removedAt || '';
+  return item;
+}
+
 function migrate(x) {
   if (!x) return fresh();
 
-  if (x.schema === 4) {
-    const n = Object.assign(fresh(), x, { schema: 4, appVersion: APP_VERSION });
+  if (x.schema === 6 || x.schema === 5) {
+    const n = Object.assign(fresh(), x, { schema: 6, appVersion: APP_VERSION });
     n.memberships = Array.isArray(n.memberships) ? n.memberships : [];
     n.contractPartners = Array.isArray(n.contractPartners) ? n.contractPartners : [];
     n.contracts = Array.isArray(n.contracts) ? n.contracts : [];
     n.contractLinks = Array.isArray(n.contractLinks) ? n.contractLinks : [];
+    n.meterReadings = Array.isArray(n.meterReadings) ? n.meterReadings : [];
+    n.leaseAreas = Array.isArray(n.leaseAreas) ? n.leaseAreas : [];
+    n.mapReferences = Array.isArray(n.mapReferences) ? n.mapReferences : [];
+    n.osmImports = Array.isArray(n.osmImports) ? n.osmImports : [];
+    n.inventory = Array.isArray(n.inventory) ? n.inventory : [];
+    n.inventory.forEach(ensureInventoryGeoFields);
+    return n;
+  }
+
+  if (x.schema === 4) {
+    const n = Object.assign(fresh(), x, {
+      schema: 6,
+      appVersion: APP_VERSION,
+      meterReadings: [],
+      leaseAreas: [],
+      mapReferences: [],
+      osmImports: []
+    });
+    n.memberships = Array.isArray(n.memberships) ? n.memberships : [];
+    n.contractPartners = Array.isArray(n.contractPartners) ? n.contractPartners : [];
+    n.contracts = Array.isArray(n.contracts) ? n.contracts : [];
+    n.contractLinks = Array.isArray(n.contractLinks) ? n.contractLinks : [];
+    n.inventory = Array.isArray(n.inventory) ? n.inventory : [];
+    n.inventory.forEach(ensureInventoryGeoFields);
     return n;
   }
 
   if (x.schema === 3) {
     const n = Object.assign(fresh(), x, {
-      schema: 4,
+      schema: 6,
       appVersion: APP_VERSION,
       memberships: [],
       contractPartners: [],
       contracts: [],
-      contractLinks: []
+      contractLinks: [],
+      meterReadings: [],
+      leaseAreas: [],
+      mapReferences: [],
+      osmImports: []
     });
 
     const partnerMap = new Map();
@@ -105,6 +149,8 @@ function migrate(x) {
       l.documentData = l.documentData || '';
     });
 
+    n.inventory = Array.isArray(n.inventory) ? n.inventory : [];
+    n.inventory.forEach(ensureInventoryGeoFields);
     return n;
   }
 
@@ -147,7 +193,7 @@ function load() {
 
 function save() {
   db.appVersion = APP_VERSION;
-  db.schema = 4;
+  db.schema = 6;
   localStorage.setItem(KEY, JSON.stringify(db));
   render();
 }
@@ -185,6 +231,57 @@ function pathPointCount(path) {
 }
 function pathHelp() { return 'Eine Koordinate pro Zeile: Breitengrad, Längengrad – z. B. 51.5321, 9.9342'; }
 
+function parsePath(path) {
+  return String(path || '')
+    .split(/\n+/)
+    .map(line => line.trim())
+    .filter(Boolean)
+    .map(line => line.split(',').map(part => Number(part.trim())))
+    .filter(parts => parts.length >= 2 && Number.isFinite(parts[0]) && Number.isFinite(parts[1]))
+    .map(([lat, lng]) => [lng, lat]);
+}
+function pathFromCoordinates(coordinates) {
+  return (coordinates || []).map(([lng, lat]) => `${Number(lat).toFixed(6)}, ${Number(lng).toFixed(6)}`).join('\n');
+}
+function pointGeometry(lat, lng) {
+  const a = Number(lat), b = Number(lng);
+  return Number.isFinite(a) && Number.isFinite(b) ? { type: 'Point', coordinates: [b, a] } : null;
+}
+function legacyGeometry(obj, kind = '') {
+  if (obj?.geometry?.type && Array.isArray(obj.geometry.coordinates)) return obj.geometry;
+  if (kind === 'way' || kind === 'line') {
+    const coords = parsePath(obj?.path);
+    return coords.length >= 2 ? { type: 'LineString', coordinates: coords } : null;
+  }
+  if (kind === 'inventory' && obj?.path) {
+    const coords = parsePath(obj.path);
+    if (coords.length >= 2) return { type: 'LineString', coordinates: coords };
+  }
+  return pointGeometry(obj?.latitude, obj?.longitude);
+}
+function geometryPointCount(geometry) {
+  if (!geometry) return 0;
+  if (geometry.type === 'Point') return 1;
+  if (geometry.type === 'LineString') return geometry.coordinates?.length || 0;
+  if (geometry.type === 'Polygon') return geometry.coordinates?.[0]?.length || 0;
+  return 0;
+}
+function isMeter(item) { return ['Wasserzähler', 'Stromzähler'].includes(item?.type); }
+function meterLatestReading(meterId) {
+  return [...db.meterReadings]
+    .filter(r => r.meterId === meterId)
+    .sort((a, b) => String(b.date || '').localeCompare(String(a.date || '')) || String(b.createdAt || '').localeCompare(String(a.createdAt || '')))[0] || null;
+}
+function meterReadingUsage(meterId, readingId) {
+  const readings = [...db.meterReadings]
+    .filter(r => r.meterId === meterId && r.value !== '' && Number.isFinite(Number(r.value)))
+    .sort((a, b) => String(a.date || '').localeCompare(String(b.date || '')) || String(a.createdAt || '').localeCompare(String(b.createdAt || '')));
+  const index = readings.findIndex(r => r.id === readingId);
+  if (index <= 0) return null;
+  const diff = Number(readings[index].value) - Number(readings[index - 1].value);
+  return Number.isFinite(diff) ? diff : null;
+}
+
 function activeLeaseForPlot(plotId, date = today()) { return db.leases.find(l => l.plotId === plotId && l.status !== 'beendet' && (!l.start || l.start <= date) && (!l.end || l.end >= date)); }
 function activeAddressForPerson(personId, date = today()) { const rel = db.personAddresses.find(r => r.personId === personId && (!r.validFrom || r.validFrom <= date) && (!r.validTo || r.validTo >= date)); return rel ? addressText(rel.addressId) : '–'; }
 function addEvent(caseId, type, text, fromPersonId = '', toPersonId = '') { db.events.unshift({ id: uid(), caseId, at: now(), type, text, fromPersonId, toPersonId }); }
@@ -200,13 +297,15 @@ const NAVIGATION = {
   memberships: { group: 'Mitglieder & Personen', page: 'Mitgliedschaften' },
   leases: { group: 'Mitglieder & Personen', page: 'Unterpachtverhältnisse' },
   contracts: { group: 'Verträge', page: 'Verträge & Partner' },
+  map: { group: 'Anlage & Inventar', page: 'Karte' },
   plots: { group: 'Anlage & Inventar', page: 'Parzellen' },
   landparcels: { group: 'Anlage & Inventar', page: 'Flurstücke' },
   ways: { group: 'Anlage & Inventar', page: 'Wege' },
   gates: { group: 'Anlage & Inventar', page: 'Außentore' },
   panels: { group: 'Anlage & Inventar', page: 'Unterverteilungen' },
-  valves: { group: 'Anlage & Inventar', page: 'Wasserschieber' },
-  meters: { group: 'Anlage & Inventar', page: 'Zähler' },
+  valves: { group: 'Anlage & Inventar', page: 'Absperrschieber' },
+  watermeters: { group: 'Anlage & Inventar', page: 'Wasserzähler' },
+  powermeters: { group: 'Anlage & Inventar', page: 'Stromzähler' },
   powerlines: { group: 'Anlage & Inventar', page: 'Stromleitungen' },
   waterlines: { group: 'Anlage & Inventar', page: 'Wasserleitungen' },
   backup: { group: 'System', page: 'Import & Export' }
@@ -267,6 +366,7 @@ function tab(name) {
 
   updateBreadcrumb(name);
   closeMenu();
+  if (name === 'map') setTimeout(initGardenMap, 0);
 }
 
 document.querySelectorAll('[data-tab]').forEach(button => {
@@ -301,14 +401,17 @@ function render() {
   renderPlots();
   renderLandParcels();
   renderWays();
+  renderMap();
   renderInventoryCategory('gates', 'Außentore', ['Außentor']);
-  renderInventoryCategory('panels', 'Unterverteilungen', ['Unterverteilung']);
-  renderInventoryCategory('valves', 'Wasserschieber', ['Schieber']);
-  renderInventoryCategory('meters', 'Zähler', ['Wasserzähler', 'Stromzähler']);
-  renderInventoryCategory('powerlines', 'Stromleitungen', ['Stromleitung']);
   renderInventoryCategory('waterlines', 'Wasserleitungen', ['Wasserleitung', 'Wasserstrang']);
+  renderInventoryCategory('valves', 'Absperrschieber', ['Schieber']);
+  renderInventoryCategory('watermeters', 'Wasserzähler', ['Wasserzähler']);
+  renderInventoryCategory('powerlines', 'Stromleitungen', ['Stromleitung']);
+  renderInventoryCategory('panels', 'Unterverteilungen', ['Unterverteilung']);
+  renderInventoryCategory('powermeters', 'Stromzähler', ['Stromzähler']);
   renderBackup();
   enhanceResponsiveTables();
+  if (!document.querySelector('#map')?.classList.contains('hidden')) setTimeout(initGardenMap, 0);
 }
 
 function enhanceResponsiveTables() {
@@ -488,7 +591,7 @@ function renderPlots() {
   document.querySelector('#plots').innerHTML = `
     <div class="actions"><button class="primary" onclick="editPlot()">+ Parzelle</button><button onclick="editPlotLandParcel()">+ Flurstück zuordnen</button></div>
 
-    <div class="plot-mobile-controls" aria-label="Parzellen suchen und filtern">
+    <div class="plot-controls" aria-label="Parzellen suchen und filtern">
       <label class="plot-search">
         <span>Parzelle suchen</span>
         <input type="search" value="${esc(plotViewState.search)}" placeholder="z. B. Garten 82" oninput="setPlotViewState('search', this.value)">
@@ -530,11 +633,824 @@ function renderPlots() {
     <div id="plotCardList" class="plot-card-list">${plotCards(items)}</div>`;
 }
 
+
+let gardenMap = null;
+let gardenMapLayerGroup = null;
+let gardenMapDraftLayer = null;
+let gardenMapDraft = { mode: '', points: [] };
+
+function renderMap() {
+  const section = document.querySelector('#map');
+  if (!section) return;
+  section.innerHTML = `
+    <div class="map-page">
+      <div class="map-toolbar card map-toolbar--compact" aria-label="Kartenwerkzeuge">
+        <div class="map-toolbar-row map-toolbar-row--layers">
+          <div class="map-toolbar-label">Kartenebenen</div>
+          <div class="map-layer-list map-layer-list--toolbar" aria-label="Fachdaten">
+            <label><input type="checkbox" data-map-layer="plots" checked onchange="refreshGardenMapLayers()"> <span>Parzellen</span></label>
+            <label><input type="checkbox" data-map-layer="landparcels" checked onchange="refreshGardenMapLayers()"> <span>Flurstücke</span></label>
+            <label><input type="checkbox" data-map-layer="leaseareas" checked onchange="refreshGardenMapLayers()"> <span>Pachtflächen</span></label>
+            <label><input type="checkbox" data-map-layer="ways" checked onchange="refreshGardenMapLayers()"> <span>Wege</span></label>
+            <label><input type="checkbox" data-map-layer="water" checked onchange="refreshGardenMapLayers()"> <span>Wasser</span></label>
+            <label><input type="checkbox" data-map-layer="power" checked onchange="refreshGardenMapLayers()"> <span>Strom</span></label>
+            <label><input type="checkbox" data-map-layer="inventory" checked onchange="refreshGardenMapLayers()"> <span>Inventar</span></label>
+          </div>
+          <div class="map-layer-separator" aria-hidden="true"></div>
+          <div class="map-layer-list map-layer-list--toolbar map-layer-list--reference" aria-label="Referenzdaten">
+            <span class="map-inline-caption">Referenz</span>
+            <label class="map-layer-nowrap"><input type="checkbox" data-map-layer="osmreference" checked onchange="refreshGardenMapLayers()"> <span>OSM-Referenz</span></label>
+          </div>
+        </div>
+
+        <div class="map-toolbar-row map-toolbar-row--editor">
+          <div class="map-toolbar-label">Geometrie</div>
+          <div class="map-editor-targets map-editor-targets--toolbar">
+            <label>Objektart
+              <select id="mapTargetType" onchange="updateMapTargetOptions()">
+                <option value="plot">Parzelle</option>
+                <option value="landParcel">Flurstück</option>
+                <option value="leaseArea">Pachtfläche</option>
+                <option value="way">Weg</option>
+                <option value="inventory">Inventarobjekt</option>
+              </select>
+            </label>
+            <label class="map-target-select">Objekt
+              <select id="mapTargetId"></select>
+            </label>
+          </div>
+          <div class="map-draw-toggle" role="group" aria-label="Geometrietyp">
+            <button type="button" data-map-draw-mode="Point" aria-pressed="false" onclick="startMapDraw('Point')">Punkt</button>
+            <button type="button" data-map-draw-mode="LineString" aria-pressed="false" onclick="startMapDraw('LineString')">Linie</button>
+            <button type="button" data-map-draw-mode="Polygon" aria-pressed="false" onclick="startMapDraw('Polygon')">Polygon</button>
+          </div>
+          <button type="button" class="map-tool-secondary" onclick="undoMapPoint()">Punkt zurück</button>
+          <div class="map-toolbar-spacer" aria-hidden="true"></div>
+          <div class="map-editor-actions">
+            <button type="button" class="primary" onclick="saveMapDrawing()">Geometrie speichern</button>
+            <button type="button" onclick="cancelMapDrawing()">Abbrechen</button>
+          </div>
+        </div>
+
+        <div class="map-toolbar-row map-toolbar-row--actions">
+          <div class="map-toolbar-label">Aktionen</div>
+          <div class="map-action-list map-action-list--toolbar">
+            <button type="button" onclick="fitGardenMapToData()">Auf vorhandene Daten zoomen</button>
+            <button type="button" onclick="editLeaseArea()">+ Pachtfläche</button>
+            <button type="button" onclick="loadBundledOsmImport()">OSM-Referenzdaten importieren</button>
+            <label class="osm-file-button btn" title="OpenStreetMap-XML-Datei (.osm) auswählen">OSM-Datei auswählen<input id="osmFileInput" type="file" accept=".osm,.xml,text/xml,application/xml" onchange="handleOsmFileInput(this)" hidden></label>
+          </div>
+        </div>
+      </div>
+
+      <div class="map-meta" aria-live="polite">
+        <span id="mapDrawStatus">Zum Erfassen Objekt wählen, dann Punkt/Linie/Polygon aktivieren.</span>
+        <span id="osmImportSummary" class="osm-import-summary">${osmImportSummaryHtml()}</span>
+      </div>
+
+      <div class="map-card card">
+        <div id="gardenMap" class="garden-map" role="application" aria-label="Karte der Gartenanlage"></div>
+        <p class="subtle map-note">Die Basiskarte wird online von OpenStreetMap geladen. Vereinsdaten und erfasste Geometrien bleiben lokal in der Gartenakte.</p>
+      </div>
+      <div class="card wide lease-area-list">
+        <h2>Pachtflächen</h2>
+        <p class="subtle">Pachtflächen sind die tatsächlich vom Verein gepachteten Flächen. Sie können einem vollständigen oder nur einem Teil eines Flurstücks entsprechen.</p>
+        <table><thead><tr><th>Name</th><th>Flurstück</th><th>Vertrag</th><th>Umfang</th><th>Fläche</th><th>Geometrie</th><th></th></tr></thead><tbody>
+          ${db.leaseAreas.map(a => `<tr><td><b>${esc(a.name || 'Pachtfläche')}</b></td><td>${esc(landParcelName(a.landParcelId))}</td><td>${esc(contractName(a.contractId))}</td><td>${esc(a.coverage || 'teilweise')}</td><td>${esc(a.area ? a.area + ' m²' : '–')}</td><td>${a.geometry ? esc(`${a.geometry.type} · ${geometryPointCount(a.geometry)} Punkte`) : '–'}</td><td><button onclick="editLeaseArea('${a.id}')">Bearbeiten</button></td></tr>`).join('') || '<tr><td colspan="7" class="muted">Noch keine Pachtflächen.</td></tr>'}
+        </tbody></table>
+      </div>
+    </div>`;
+}
+
+function mapTargetItems(type) {
+  if (type === 'plot') return db.plots.map(x => ({ id: x.id, label: plotName(x.id) }));
+  if (type === 'landParcel') return db.landParcels.map(x => ({ id: x.id, label: landParcelName(x.id) }));
+  if (type === 'leaseArea') return db.leaseAreas.map(x => ({ id: x.id, label: x.name || 'Pachtfläche' }));
+  if (type === 'way') return db.ways.map(x => ({ id: x.id, label: x.name }));
+  if (type === 'inventory') return db.inventory.map(x => ({ id: x.id, label: `${x.type} · ${inventoryName(x.id)}` }));
+  return [];
+}
+
+function updateMapTargetOptions() {
+  const type = document.querySelector('#mapTargetType')?.value || 'plot';
+  const target = document.querySelector('#mapTargetId');
+  if (!target) return;
+  const items = mapTargetItems(type);
+  target.innerHTML = items.map(x => `<option value="${esc(x.id)}">${esc(x.label)}</option>`).join('') || '<option value="">– keine Objekte –</option>';
+}
+
+function geometryForTarget(type, id) {
+  if (type === 'plot') return legacyGeometry(byId(db.plots, id), 'plot');
+  if (type === 'landParcel') return byId(db.landParcels, id)?.geometry || null;
+  if (type === 'leaseArea') return byId(db.leaseAreas, id)?.geometry || null;
+  if (type === 'way') return legacyGeometry(byId(db.ways, id), 'way');
+  if (type === 'inventory') return legacyGeometry(byId(db.inventory, id), 'inventory');
+  return null;
+}
+
+function applyGeometryToTarget(type, id, geometry) {
+  if (!id || !geometry) return false;
+  if (type === 'plot') {
+    const item = byId(db.plots, id);
+    if (!item) return false;
+    item.geometry = geometry;
+    if (geometry.type === 'Point') {
+      item.longitude = geometry.coordinates[0];
+      item.latitude = geometry.coordinates[1];
+    }
+    return true;
+  }
+  if (type === 'landParcel') {
+    const item = byId(db.landParcels, id);
+    if (!item) return false;
+    item.geometry = geometry;
+    return true;
+  }
+  if (type === 'leaseArea') {
+    const item = byId(db.leaseAreas, id);
+    if (!item) return false;
+    item.geometry = geometry;
+    return true;
+  }
+  if (type === 'way') {
+    const item = byId(db.ways, id);
+    if (!item) return false;
+    item.geometry = geometry;
+    if (geometry.type === 'LineString') item.path = pathFromCoordinates(geometry.coordinates);
+    return true;
+  }
+  if (type === 'inventory') {
+    const item = byId(db.inventory, id);
+    if (!item) return false;
+    item.geometry = geometry;
+    if (geometry.type === 'Point') {
+      item.longitude = geometry.coordinates[0];
+      item.latitude = geometry.coordinates[1];
+      item.path = '';
+    } else if (geometry.type === 'LineString') {
+      item.path = pathFromCoordinates(geometry.coordinates);
+    }
+    return true;
+  }
+  return false;
+}
+
+function gardenMapStyle(category) {
+  const styles = {
+    plot: { color: '#2f6f44', fillColor: '#4f8d62', weight: 2, fillOpacity: 0.2 },
+    landParcel: { color: '#5a6470', fillColor: '#9aa2aa', weight: 2, fillOpacity: 0.08, dashArray: '5 5' },
+    leaseArea: { color: '#8b5e34', fillColor: '#c58c55', weight: 2, fillOpacity: 0.18 },
+    way: { color: '#796d5f', weight: 4, opacity: 0.75 },
+    water: { color: '#2f6f9f', weight: 4, opacity: 0.85 },
+    power: { color: '#8a6d1e', weight: 4, opacity: 0.85 },
+    inventory: { color: '#3f4842', fillColor: '#ffffff', weight: 2, fillOpacity: 1 },
+    reference: { color: '#6b7280', fillColor: '#94a3b8', weight: 2, fillOpacity: 0.04, dashArray: '8 6' }
+  };
+  return styles[category] || styles.inventory;
+}
+
+function addGeometryToMap(geometry, category, label) {
+  if (!gardenMapLayerGroup || !geometry || !window.L) return null;
+  const style = gardenMapStyle(category);
+  let layer = null;
+  if (geometry.type === 'Point') {
+    const [lng, lat] = geometry.coordinates;
+    layer = L.circleMarker([lat, lng], { ...style, radius: 6 });
+  } else if (geometry.type === 'LineString') {
+    layer = L.polyline(geometry.coordinates.map(([lng, lat]) => [lat, lng]), style);
+  } else if (geometry.type === 'Polygon') {
+    const ring = geometry.coordinates?.[0] || [];
+    layer = L.polygon(ring.map(([lng, lat]) => [lat, lng]), style);
+  }
+  if (layer) {
+    if (label) layer.bindPopup(`<b>${esc(label)}</b>`);
+    gardenMapLayerGroup.addLayer(layer);
+  }
+  return layer;
+}
+
+function mapLayerEnabled(name) {
+  const input = document.querySelector(`[data-map-layer="${name}"]`);
+  return !input || input.checked;
+}
+
+function refreshGardenMapLayers() {
+  if (!gardenMap || !gardenMapLayerGroup) return;
+  gardenMapLayerGroup.clearLayers();
+
+  if (mapLayerEnabled('plots')) {
+    db.plots.forEach(p => addGeometryToMap(legacyGeometry(p, 'plot'), 'plot', plotName(p.id)));
+  }
+  if (mapLayerEnabled('landparcels')) {
+    db.landParcels.forEach(f => addGeometryToMap(f.geometry, 'landParcel', landParcelName(f.id)));
+  }
+  if (mapLayerEnabled('leaseareas')) {
+    db.leaseAreas.forEach(a => addGeometryToMap(a.geometry, 'leaseArea', a.name || 'Pachtfläche'));
+  }
+  if (mapLayerEnabled('ways')) {
+    db.ways.forEach(w => addGeometryToMap(legacyGeometry(w, 'way'), 'way', w.name));
+  }
+  if (mapLayerEnabled('osmreference')) {
+    (db.mapReferences || []).forEach(r => addGeometryToMap(r.geometry, 'reference', r.name || 'OSM-Referenz'));
+  }
+
+  db.inventory.forEach(i => {
+    const geom = legacyGeometry(i, 'inventory');
+    if (!geom) return;
+    if (['Wasserleitung', 'Wasserstrang'].includes(i.type) && mapLayerEnabled('water')) addGeometryToMap(geom, 'water', inventoryName(i.id));
+    else if (i.type === 'Stromleitung' && mapLayerEnabled('power')) addGeometryToMap(geom, 'power', inventoryName(i.id));
+    else if (!['Wasserleitung', 'Wasserstrang', 'Stromleitung'].includes(i.type) && mapLayerEnabled('inventory')) addGeometryToMap(geom, 'inventory', `${i.type} · ${inventoryName(i.id)}`);
+  });
+}
+
+function zoomRelevantGardenGeometries() {
+  return [
+    ...db.plots.map(p => legacyGeometry(p, 'plot')),
+    ...db.landParcels.map(f => f.geometry),
+    ...db.leaseAreas.map(a => a.geometry),
+    ...db.ways.map(w => legacyGeometry(w, 'way')),
+    ...db.inventory.map(i => legacyGeometry(i, 'inventory')),
+    ...(db.mapReferences || [])
+      .filter(r => r.category === 'Koloniegrenze')
+      .map(r => r.geometry)
+  ].filter(Boolean);
+}
+
+function collectGeometryLatLngs(geometry, result = []) {
+  if (!geometry) return result;
+
+  if (geometry.type === 'Feature') {
+    return collectGeometryLatLngs(geometry.geometry, result);
+  }
+  if (geometry.type === 'FeatureCollection') {
+    (geometry.features || []).forEach(feature => collectGeometryLatLngs(feature, result));
+    return result;
+  }
+  if (geometry.type === 'GeometryCollection') {
+    (geometry.geometries || []).forEach(item => collectGeometryLatLngs(item, result));
+    return result;
+  }
+
+  const pushPosition = position => {
+    if (!Array.isArray(position) || position.length < 2) return;
+    const lng = Number(position[0]);
+    const lat = Number(position[1]);
+    if (!Number.isFinite(lat) || !Number.isFinite(lng)) return;
+    if (lat < -90 || lat > 90 || lng < -180 || lng > 180) return;
+    result.push(L.latLng(lat, lng));
+  };
+
+  const walkPositions = value => {
+    if (!Array.isArray(value)) return;
+    if (value.length >= 2 && !Array.isArray(value[0])) {
+      pushPosition(value);
+      return;
+    }
+    value.forEach(walkPositions);
+  };
+
+  switch (geometry.type) {
+    case 'Point':
+    case 'MultiPoint':
+    case 'LineString':
+    case 'MultiLineString':
+    case 'Polygon':
+    case 'MultiPolygon':
+      walkPositions(geometry.coordinates);
+      break;
+    default:
+      break;
+  }
+
+  return result;
+}
+
+function allGardenMapLatLngs() {
+  if (!window.L) return [];
+  const points = [];
+  zoomRelevantGardenGeometries().forEach(geometry => collectGeometryLatLngs(geometry, points));
+
+  const unique = new Map();
+  points.forEach(point => {
+    const key = `${point.lat.toFixed(8)},${point.lng.toFixed(8)}`;
+    if (!unique.has(key)) unique.set(key, point);
+  });
+  return [...unique.values()];
+}
+
+function initGardenMap() {
+  const el = document.getElementById('gardenMap');
+  if (!el || document.querySelector('#map')?.classList.contains('hidden')) return;
+  if (!window.L) {
+    el.innerHTML = '<div class="map-unavailable"><b>Kartenbibliothek nicht geladen.</b><br>Für die Basiskarte wird beim ersten Öffnen eine Internetverbindung benötigt.</div>';
+    return;
+  }
+  if (gardenMap) {
+    gardenMap.remove();
+    gardenMap = null;
+  }
+  gardenMap = L.map(el, { zoomControl: true }).setView([51.53, 9.94], 15);
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    maxZoom: 20,
+    attribution: '&copy; OpenStreetMap-Mitwirkende'
+  }).addTo(gardenMap);
+  gardenMapLayerGroup = L.layerGroup().addTo(gardenMap);
+  gardenMap.on('click', handleGardenMapClick);
+  updateMapTargetOptions();
+  refreshGardenMapLayers();
+  if (allGardenMapLatLngs().length) fitGardenMapToData();
+  setTimeout(() => gardenMap?.invalidateSize(), 60);
+}
+
+function fitGardenMapToData() {
+  if (!gardenMap) initGardenMap();
+  if (!gardenMap || !window.L) return;
+
+  gardenMap.invalidateSize({ pan: false });
+  const points = allGardenMapLatLngs();
+
+  if (!points.length) {
+    updateMapDrawStatus('Keine vorhandenen Geometriedaten zum Zoomen gefunden.');
+    return;
+  }
+
+  gardenMap.stop();
+
+  if (points.length === 1) {
+    gardenMap.setView(points[0], 17, { animate: false });
+    updateMapDrawStatus('Auf vorhandene Geometriedaten gezoomt.');
+    return;
+  }
+
+  const bounds = L.latLngBounds(points);
+  if (!bounds.isValid()) {
+    updateMapDrawStatus('Keine vorhandenen Geometriedaten zum Zoomen gefunden.');
+    return;
+  }
+
+  if (bounds.getNorthEast().equals(bounds.getSouthWest())) {
+    gardenMap.setView(bounds.getCenter(), 17, { animate: false });
+    updateMapDrawStatus('Auf vorhandene Geometriedaten gezoomt.');
+    return;
+  }
+
+  gardenMap.fitBounds(bounds, {
+    padding: [30, 30],
+    maxZoom: 18,
+    animate: false
+  });
+  updateMapDrawStatus('Auf vorhandene Geometriedaten gezoomt.');
+}
+
+function startMapDraw(mode) {
+  if (!gardenMap) initGardenMap();
+  gardenMapDraft = { mode, points: [] };
+  updateMapDrawStatus();
+  refreshMapDraftLayer();
+}
+
+function handleGardenMapClick(event) {
+  if (!gardenMapDraft.mode) return;
+  const { lat, lng } = event.latlng;
+  if (gardenMapDraft.mode === 'Point') gardenMapDraft.points = [[lng, lat]];
+  else gardenMapDraft.points.push([lng, lat]);
+  refreshMapDraftLayer();
+  updateMapDrawStatus();
+}
+
+function refreshMapDraftLayer() {
+  if (!gardenMap || !window.L) return;
+  if (gardenMapDraftLayer) {
+    gardenMap.removeLayer(gardenMapDraftLayer);
+    gardenMapDraftLayer = null;
+  }
+  const pts = gardenMapDraft.points || [];
+  if (!pts.length) return;
+  if (gardenMapDraft.mode === 'Point') {
+    gardenMapDraftLayer = L.circleMarker([pts[0][1], pts[0][0]], { radius: 7, color: '#1f6f43', fillColor: '#ffffff', fillOpacity: 1, weight: 3 }).addTo(gardenMap);
+  } else if (gardenMapDraft.mode === 'LineString') {
+    gardenMapDraftLayer = L.polyline(pts.map(([lng, lat]) => [lat, lng]), { color: '#1f6f43', weight: 4, dashArray: '6 5' }).addTo(gardenMap);
+  } else if (gardenMapDraft.mode === 'Polygon') {
+    gardenMapDraftLayer = L.polygon(pts.map(([lng, lat]) => [lat, lng]), { color: '#1f6f43', weight: 3, fillColor: '#1f6f43', fillOpacity: 0.12, dashArray: '6 5' }).addTo(gardenMap);
+  }
+}
+
+function updateMapDrawStatus(message = '') {
+  document.querySelectorAll('[data-map-draw-mode]').forEach(button => {
+    const active = button.dataset.mapDrawMode === gardenMapDraft.mode;
+    button.classList.toggle('is-active', active);
+    button.setAttribute('aria-pressed', String(active));
+  });
+  const status = document.getElementById('mapDrawStatus');
+  if (!status) return;
+  if (message) {
+    status.textContent = message;
+    return;
+  }
+  if (!gardenMapDraft.mode) {
+    status.textContent = 'Zum Erfassen Objekt wählen, dann Punkt/Linie/Polygon aktivieren.';
+    return;
+  }
+  const names = { Point: 'Punkt', LineString: 'Linie', Polygon: 'Polygon' };
+  status.textContent = `${names[gardenMapDraft.mode]} aktiv · ${gardenMapDraft.points.length} Punkt(e) gesetzt. In die Karte klicken.`;
+}
+
+function undoMapPoint() {
+  gardenMapDraft.points.pop();
+  refreshMapDraftLayer();
+  updateMapDrawStatus();
+}
+
+function cancelMapDrawing() {
+  gardenMapDraft = { mode: '', points: [] };
+  if (gardenMapDraftLayer && gardenMap) gardenMap.removeLayer(gardenMapDraftLayer);
+  gardenMapDraftLayer = null;
+  updateMapDrawStatus();
+}
+
+function saveMapDrawing() {
+  const type = document.getElementById('mapTargetType')?.value;
+  const id = document.getElementById('mapTargetId')?.value;
+  const mode = gardenMapDraft.mode;
+  const points = gardenMapDraft.points || [];
+  if (!type || !id) return alert('Bitte zuerst ein Zielobjekt auswählen.');
+  if (!mode) return alert('Bitte Punkt, Linie oder Polygon auswählen und in der Karte erfassen.');
+  if (['landParcel', 'leaseArea'].includes(type) && mode !== 'Polygon') return alert('Flurstücke und Pachtflächen werden als Polygon erfasst.');
+  if (type === 'way' && mode !== 'LineString') return alert('Wege werden als Linie erfasst.');
+  if (type === 'inventory') {
+    const item = byId(db.inventory, id);
+    const isLineObject = ['Wasserleitung', 'Wasserstrang', 'Stromleitung'].includes(item?.type);
+    if (isLineObject && mode !== 'LineString') return alert('Leitungen werden als Linie erfasst.');
+    if (!isLineObject && mode !== 'Point') return alert('Dieses Inventarobjekt wird als Punkt erfasst.');
+  }
+  if (mode === 'Point' && points.length !== 1) return alert('Für einen Punkt genau eine Position setzen.');
+  if (mode === 'LineString' && points.length < 2) return alert('Eine Linie benötigt mindestens zwei Punkte.');
+  if (mode === 'Polygon' && points.length < 3) return alert('Ein Polygon benötigt mindestens drei Punkte.');
+  const geometry = mode === 'Point'
+    ? { type: 'Point', coordinates: points[0] }
+    : mode === 'LineString'
+      ? { type: 'LineString', coordinates: [...points] }
+      : { type: 'Polygon', coordinates: [[...points, points[0]]] };
+  if (!applyGeometryToTarget(type, id, geometry)) return alert('Geometrie konnte dem Objekt nicht zugeordnet werden.');
+  cancelMapDrawing();
+  save();
+  setTimeout(() => {
+    initGardenMap();
+    updateMapDrawStatus('Geometrie gespeichert.');
+  }, 0);
+}
+
+
+let pendingOsmImport = null;
+
+function osmImportSummaryHtml() {
+  const items = db.osmImports || [];
+  if (!items.length) return 'Noch kein OSM-Datensatz importiert. Der mitgelieferte Export enthält die Anlage Rosengarten als Vektordaten.';
+  const last = items[items.length - 1];
+  return `Letzter OSM-Import: <b>${esc(last.sourceName || 'OSM')}</b> · ${esc(last.importedAt ? new Date(last.importedAt).toLocaleString('de-DE') : '')} · ${Number(last.matchedPlots || 0)} Parzellen, ${Number(last.ways || 0)} Wege, ${Number(last.gates || 0)} Außentore.`;
+}
+
+function osmTags(element) {
+  const tags = {};
+  element.querySelectorAll(':scope > tag').forEach(tag => { tags[tag.getAttribute('k')] = tag.getAttribute('v') || ''; });
+  return tags;
+}
+
+function pointInsideRing(point, ring) {
+  const [x, y] = point;
+  let inside = false;
+  for (let i = 0, j = ring.length - 1; i < ring.length; j = i++) {
+    const [xi, yi] = ring[i];
+    const [xj, yj] = ring[j];
+    const intersects = ((yi > y) !== (yj > y)) && (x < ((xj - xi) * (y - yi)) / ((yj - yi) || Number.EPSILON) + xi);
+    if (intersects) inside = !inside;
+  }
+  return inside;
+}
+
+function geometryCentroid(geometry) {
+  const ring = geometry?.type === 'Polygon' ? (geometry.coordinates?.[0] || []) : [];
+  if (!ring.length) return null;
+  const usable = ring.length > 1 && ring[0][0] === ring[ring.length - 1][0] && ring[0][1] === ring[ring.length - 1][1] ? ring.slice(0, -1) : ring;
+  if (!usable.length) return null;
+  return [usable.reduce((s, p) => s + p[0], 0) / usable.length, usable.reduce((s, p) => s + p[1], 0) / usable.length];
+}
+
+function normalizeGardenWayName(name) {
+  const value = String(name || '').trim().toLocaleLowerCase('de-DE');
+  const aliases = {
+    'niemannweg': 'otto-niemann-weg',
+    'otto-niemann-weg': 'otto-niemann-weg',
+    'schlieperweg': 'walter-schlieper-weg',
+    'walter-schlieper-weg': 'walter-schlieper-weg',
+    'gehrkeweg': 'bernhard-gehrke-weg',
+    'bernhard-gehrke-weg': 'bernhard-gehrke-weg',
+    'rosenweg': 'rosenweg',
+    'reinhäuser landstraße': 'reinhäuser landstraße'
+  };
+  return aliases[value] || value;
+}
+
+function parseOsmXml(text, sourceName = 'OSM-Datei') {
+  const xml = new DOMParser().parseFromString(text, 'application/xml');
+  if (xml.querySelector('parsererror')) throw new Error('Die OSM-Datei ist kein gültiges XML-Dokument.');
+  const root = xml.documentElement;
+  if (!root || root.nodeName.toLowerCase() !== 'osm') throw new Error('Die Datei enthält keinen OSM-Export.');
+
+  const nodes = new Map();
+  root.querySelectorAll(':scope > node').forEach(node => {
+    nodes.set(node.getAttribute('id'), {
+      coordinates: [Number(node.getAttribute('lon')), Number(node.getAttribute('lat'))],
+      tags: osmTags(node)
+    });
+  });
+
+  const ways = new Map();
+  root.querySelectorAll(':scope > way').forEach(way => {
+    const refs = [...way.querySelectorAll(':scope > nd')].map(nd => nd.getAttribute('ref'));
+    ways.set(way.getAttribute('id'), { refs, tags: osmTags(way) });
+  });
+
+  const wayCoordinates = id => (ways.get(id)?.refs || []).map(ref => nodes.get(ref)?.coordinates).filter(p => p && p.every(Number.isFinite));
+  const boundaryParts = [];
+  const boundaryNodeIds = new Set();
+  let relationId = '';
+  root.querySelectorAll(':scope > relation').forEach(rel => {
+    const tags = osmTags(rel);
+    if (relationId || tags.type !== 'multipolygon' || tags.landuse !== 'allotments' || tags.name !== 'Gartenkolonie Rosengarten') return;
+    relationId = `relation/${rel.getAttribute('id')}`;
+    rel.querySelectorAll(':scope > member[type="way"][role="outer"]').forEach(member => {
+      const wayId = member.getAttribute('ref');
+      (ways.get(wayId)?.refs || []).forEach(ref => boundaryNodeIds.add(ref));
+      const coords = wayCoordinates(wayId);
+      if (coords.length < 3) return;
+      if (coords[0][0] !== coords[coords.length - 1][0] || coords[0][1] !== coords[coords.length - 1][1]) coords.push([...coords[0]]);
+      boundaryParts.push({ osmId: `way/${wayId}`, name: 'Gartenkolonie Rosengarten', geometry: { type: 'Polygon', coordinates: [coords] }, tags: ways.get(wayId)?.tags || {} });
+    });
+  });
+
+  const insideColony = point => !boundaryParts.length || boundaryParts.some(part => pointInsideRing(point, part.geometry.coordinates[0]));
+  const plots = [];
+  ways.forEach((way, id) => {
+    if (way.tags.allotments !== 'plot' || !way.tags.ref) return;
+    const coords = wayCoordinates(id);
+    if (coords.length < 3) return;
+    if (coords[0][0] !== coords[coords.length - 1][0] || coords[0][1] !== coords[coords.length - 1][1]) coords.push([...coords[0]]);
+    const geometry = { type: 'Polygon', coordinates: [coords] };
+    const center = geometryCentroid(geometry);
+    if (center && insideColony(center)) plots.push({ osmId: `way/${id}`, ref: way.tags.ref, geometry, tags: way.tags });
+  });
+
+  const wantedWays = new Set(['rosenweg', 'otto-niemann-weg', 'walter-schlieper-weg', 'bernhard-gehrke-weg', 'reinhäuser landstraße']);
+  const groupedWays = new Map();
+  ways.forEach((way, id) => {
+    const name = way.tags.name || '';
+    const key = normalizeGardenWayName(name);
+    if (!wantedWays.has(key)) return;
+    const coords = wayCoordinates(id);
+    if (coords.length < 2) return;
+    if (!groupedWays.has(key)) groupedWays.set(key, { name, segments: [], osmIds: [], tags: way.tags });
+    const group = groupedWays.get(key);
+    group.segments.push(coords);
+    group.osmIds.push(id);
+  });
+  const samePoint = (a, b) => a && b && Math.abs(a[0] - b[0]) < 1e-12 && Math.abs(a[1] - b[1]) < 1e-12;
+  const mergeLineSegments = segments => {
+    const remaining = segments.map(line => line.map(point => [...point]));
+    if (!remaining.length) return [];
+    let result = remaining.shift();
+    while (remaining.length) {
+      let merged = false;
+      for (let i = 0; i < remaining.length; i += 1) {
+        const line = remaining[i];
+        if (samePoint(result[result.length - 1], line[0])) result.push(...line.slice(1));
+        else if (samePoint(result[result.length - 1], line[line.length - 1])) result.push(...line.slice(0, -1).reverse());
+        else if (samePoint(result[0], line[line.length - 1])) result = [...line.slice(0, -1), ...result];
+        else if (samePoint(result[0], line[0])) result = [...line.slice(1).reverse(), ...result];
+        else continue;
+        remaining.splice(i, 1);
+        merged = true;
+        break;
+      }
+      if (!merged) result.push(...remaining.shift());
+    }
+    return result;
+  };
+  const gardenWays = [...groupedWays.values()].map(group => ({
+    osmId: `ways/${group.osmIds.join(',')}`,
+    name: group.name,
+    geometry: { type: 'LineString', coordinates: mergeLineSegments(group.segments) },
+    tags: group.tags
+  }));
+
+  const gates = [];
+  nodes.forEach((node, id) => {
+    if (node.tags.barrier !== 'gate' || !(insideColony(node.coordinates) || boundaryNodeIds.has(id))) return;
+    gates.push({ osmId: `node/${id}`, name: node.tags.name || (node.tags.ref ? `Außentor ${node.tags.ref}` : 'Außentor'), geometry: { type: 'Point', coordinates: node.coordinates }, tags: node.tags });
+  });
+
+  const boundsEl = root.querySelector(':scope > bounds');
+  const bounds = boundsEl ? {
+    minlat: Number(boundsEl.getAttribute('minlat')),
+    minlon: Number(boundsEl.getAttribute('minlon')),
+    maxlat: Number(boundsEl.getAttribute('maxlat')),
+    maxlon: Number(boundsEl.getAttribute('maxlon'))
+  } : null;
+
+  const knownRefs = new Set(plots.map(p => String(p.ref)));
+  const missingPlotRefs = db.plots.map(p => String(p.number)).filter(number => number && !knownRefs.has(number)).sort((a, b) => Number(a) - Number(b));
+  return {
+    format: 'Gartenakte-OSM-Referenz',
+    source: 'OpenStreetMap',
+    sourceName,
+    attribution: '© OpenStreetMap-Mitwirkende',
+    license: 'ODbL 1.0',
+    bounds,
+    colony: { name: 'Gartenkolonie Rosengarten', relationId, boundaries: boundaryParts },
+    plots,
+    ways: gardenWays,
+    gates,
+    summary: { plots: plots.length, ways: gardenWays.length, gates: gates.length, boundaryParts: boundaryParts.length, missingPlotRefs }
+  };
+}
+
+async function loadBundledOsmImport() {
+  try {
+    const response = await fetch('data/rosengarten-osm.json', { cache: 'no-cache' });
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    const data = await response.json();
+    data.sourceName = 'Mitgelieferter OSM-Export map.osm';
+    prepareOsmImport(data);
+  } catch (error) {
+    alert(`OSM-Referenzdaten konnten nicht geladen werden: ${error.message}`);
+  }
+}
+
+async function handleOsmFileInput(input) {
+  const file = input?.files?.[0];
+  if (!file) return;
+  try {
+    const text = await file.text();
+    prepareOsmImport(parseOsmXml(text, file.name));
+  } catch (error) {
+    alert(`OSM-Datei konnte nicht verarbeitet werden: ${error.message}`);
+  } finally {
+    input.value = '';
+  }
+}
+
+function prepareOsmImport(data) {
+  pendingOsmImport = data;
+  const plotMatches = (data.plots || []).filter(feature => db.plots.some(plot => String(plot.number) === String(feature.ref))).length;
+  const wayMatches = (data.ways || []).filter(feature => db.ways.some(way => normalizeGardenWayName(way.name) === normalizeGardenWayName(feature.name))).length;
+  const missing = (data.summary?.missingPlotRefs || []).join(', ') || 'keine';
+  showDialog('OSM-Daten prüfen und importieren', `
+    <div class="osm-preview">
+      <div class="osm-preview-source"><b>${esc(data.sourceName || 'OSM-Datensatz')}</b></div>
+
+      <div class="osm-preview-metrics" aria-label="Zusammenfassung des OSM-Imports">
+        <div class="osm-preview-metric">
+          <span class="osm-preview-metric-label">Parzellen</span>
+          <strong class="osm-preview-metric-value">${Number(data.plots?.length || 0)}</strong>
+          <small>${plotMatches} vorhandenen Gartenakten zuordenbar</small>
+        </div>
+        <div class="osm-preview-metric">
+          <span class="osm-preview-metric-label">Wege</span>
+          <strong class="osm-preview-metric-value">${Number(data.ways?.length || 0)}</strong>
+          <small>${wayMatches} vorhandenen Wegen zuordenbar</small>
+        </div>
+        <div class="osm-preview-metric">
+          <span class="osm-preview-metric-label">Außentore</span>
+          <strong class="osm-preview-metric-value">${Number(data.gates?.length || 0)}</strong>
+          <small>innerhalb oder auf der Koloniegrenze</small>
+        </div>
+        <div class="osm-preview-metric">
+          <span class="osm-preview-metric-label">Koloniegrenze</span>
+          <strong class="osm-preview-metric-value">${Number(data.colony?.boundaries?.length || 0)}</strong>
+          <small>Polygonteil(e)</small>
+        </div>
+      </div>
+
+      <div class="osm-import-hint" role="note">
+        <b>Ohne OSM-Referenz innerhalb des Exports:</b> ${esc(missing)}
+        <span>Bestehende Fachdatensätze werden nicht gelöscht; erkannte Geometrien werden ergänzt bzw. aktualisiert.</span>
+      </div>
+
+      <fieldset class="osm-import-options">
+        <legend>Importieren</legend>
+        <label><input id="osmImportPlots" type="checkbox" checked><span>Parzellengeometrien anhand der OSM-ref-Nummer zuordnen</span></label>
+        <label><input id="osmImportWays" type="checkbox" checked><span>Wege zuordnen bzw. fehlende Wege anlegen</span></label>
+        <label><input id="osmImportGates" type="checkbox" checked><span>Außentore innerhalb oder auf der Koloniegrenze übernehmen</span></label>
+        <label><input id="osmImportBoundary" type="checkbox" checked><span>Koloniegrenze als OSM-Referenzebene speichern</span></label>
+      </fieldset>
+
+      <div class="osm-import-source"><b>Quelle:</b> OpenStreetMap · ODbL 1.0 · © OpenStreetMap-Mitwirkende</div>
+      <div class="actions osm-import-actions"><button class="primary" type="button" onclick="applyPendingOsmImport()">Ausgewählte Daten importieren</button><button type="button" onclick="dlg.close()">Abbrechen</button></div>
+    </div>`);
+}
+
+function upsertOsmReference(feature, index = 0) {
+  db.mapReferences = db.mapReferences || [];
+  const sourceId = feature.osmId || `boundary/${index + 1}`;
+  let item = db.mapReferences.find(x => x.source === 'OSM' && x.sourceId === sourceId);
+  const value = { id: item?.id || uid(), source: 'OSM', sourceId, category: 'Koloniegrenze', name: feature.name || `Gartenkolonie Rosengarten ${index + 1}`, geometry: feature.geometry, tags: feature.tags || {}, importedAt: now() };
+  if (item) Object.assign(item, value); else db.mapReferences.push(value);
+}
+
+function applyPendingOsmImport() {
+  const data = pendingOsmImport;
+  if (!data) return;
+  let matchedPlots = 0, waysChanged = 0, gatesChanged = 0;
+
+  if (document.getElementById('osmImportPlots')?.checked) {
+    (data.plots || []).forEach(feature => {
+      const plot = db.plots.find(item => String(item.number) === String(feature.ref));
+      if (!plot) return;
+      plot.geometry = feature.geometry;
+      plot.osmId = feature.osmId;
+      plot.osmImportedAt = now();
+      matchedPlots += 1;
+    });
+  }
+
+  if (document.getElementById('osmImportWays')?.checked) {
+    (data.ways || []).forEach(feature => {
+      let way = db.ways.find(item => normalizeGardenWayName(item.name) === normalizeGardenWayName(feature.name));
+      if (!way) {
+        way = { id: uid(), name: feature.name, path: '', geometry: null, note: 'Aus OpenStreetMap übernommen.' };
+        db.ways.push(way);
+      }
+      way.geometry = feature.geometry;
+      way.path = pathFromCoordinates(feature.geometry?.coordinates || []);
+      way.osmId = feature.osmId;
+      way.osmName = feature.name;
+      way.osmImportedAt = now();
+      waysChanged += 1;
+    });
+  }
+
+  if (document.getElementById('osmImportGates')?.checked) {
+    (data.gates || []).forEach((feature, index) => {
+      let gate = db.inventory.find(item => item.type === 'Außentor' && item.osmId === feature.osmId);
+      const [lng, lat] = feature.geometry.coordinates;
+      if (!gate) {
+        gate = ensureInventoryGeoFields({ id: uid(), type: 'Außentor', bmk: '', name: feature.name || `Außentor ${index + 1}`, parentId: '', status: 'aktiv', latitude: lat, longitude: lng, path: '', geometry: feature.geometry, note: 'Aus OpenStreetMap übernommen.', osmId: feature.osmId, osmImportedAt: now() });
+        db.inventory.push(gate);
+      } else {
+        Object.assign(gate, { geometry: feature.geometry, latitude: lat, longitude: lng, osmImportedAt: now() });
+      }
+      gatesChanged += 1;
+    });
+  }
+
+  if (document.getElementById('osmImportBoundary')?.checked) {
+    (data.colony?.boundaries || []).forEach(upsertOsmReference);
+  }
+
+  db.osmImports = db.osmImports || [];
+  db.osmImports.push({
+    id: uid(),
+    sourceName: data.sourceName || data.sourceFile || 'OSM-Datensatz',
+    importedAt: now(),
+    attribution: data.attribution || '© OpenStreetMap-Mitwirkende',
+    license: data.license || 'ODbL 1.0',
+    bounds: data.bounds || null,
+    matchedPlots,
+    ways: waysChanged,
+    gates: gatesChanged,
+    boundaryParts: Number(data.colony?.boundaries?.length || 0),
+    missingPlotRefs: data.summary?.missingPlotRefs || []
+  });
+
+  pendingOsmImport = null;
+  save();
+  dlg.close();
+  tab('map');
+  setTimeout(() => {
+    initGardenMap();
+    fitGardenMapToData();
+    alert(`OSM-Import abgeschlossen: ${matchedPlots} Parzellen, ${waysChanged} Wege und ${gatesChanged} Außentore verarbeitet.`);
+  }, 0);
+}
+
+function editLeaseArea(id) {
+  const a = byId(db.leaseAreas, id) || { id: '', name: '', landParcelId: '', contractId: '', coverage: 'teilweise', area: '', geometry: null, note: '' };
+  showDialog(a.id ? 'Pachtfläche bearbeiten' : 'Pachtfläche anlegen', `<form id="fleasearea" class="formgrid"><label class="full">Bezeichnung<input name="name" required value="${esc(a.name)}" placeholder="z. B. Vereinsfläche auf Flurstück 11/5"></label><label>Flurstück<select name="landParcelId">${landParcelOptions(a.landParcelId)}</select></label><label>Vertrag<select name="contractId">${opts(db.contracts, a.contractId, c => contractName(c.id))}</select></label><label>Umfang<select name="coverage"><option ${a.coverage === 'vollständig' ? 'selected' : ''}>vollständig</option><option ${a.coverage === 'teilweise' ? 'selected' : ''}>teilweise</option></select></label><label>Vertragliche Fläche m²<input type="number" step="0.01" name="area" value="${esc(a.area)}"></label><label class="full">Notiz<textarea name="note">${esc(a.note)}</textarea></label><div class="full subtle">Geometrie: ${a.geometry ? esc(`${a.geometry.type} · ${geometryPointCount(a.geometry)} Punkte`) : 'noch nicht erfasst'} – kann anschließend im Karteneditor gezeichnet werden.</div><div class="full actions"><button class="primary">Speichern</button><button type="button" onclick="dlg.close()">Abbrechen</button></div></form>`);
+  fleasearea.onsubmit = e => {
+    e.preventDefault();
+    const f = new FormData(e.target);
+    const o = { id: a.id || uid(), name: f.get('name').trim(), landParcelId: f.get('landParcelId'), contractId: f.get('contractId'), coverage: f.get('coverage'), area: f.get('area'), geometry: a.geometry || null, note: f.get('note').trim() };
+    a.id ? Object.assign(a, o) : db.leaseAreas.push(o);
+    save();
+    dlg.close();
+  };
+}
+
 function renderLandParcels() {
   document.querySelector('#landparcels').innerHTML = `
     <div class="actions"><button class="primary" onclick="editLandParcel()">+ Flurstück</button><button onclick="editPlotLandParcel()">+ Parzelle ↔ Flurstück</button></div>
-    <div class="card wide"><table><thead><tr><th>Flurstück</th><th>Größe</th><th>Parzellen</th><th></th></tr></thead><tbody>
-    ${db.landParcels.map(f => `<tr><td><b>${esc(landParcelName(f.id))}</b></td><td>${esc(f.area ? f.area + ' m²' : '–')}</td><td>${db.plotLandParcels.filter(r=>r.landParcelId===f.id).map(r=>esc(plotName(r.plotId))).join(', ') || '–'}</td><td><button onclick="editLandParcel('${f.id}')">Bearbeiten</button></td></tr>`).join('') || '<tr><td colspan="4" class="muted">Noch keine Flurstücke.</td></tr>'}
+    <div class="card wide"><table><thead><tr><th>Flurstück</th><th>Amtliche Fläche</th><th>Parzellen</th><th>Pachtflächen</th><th>Geometrie</th><th></th></tr></thead><tbody>
+    ${db.landParcels.map(f => `<tr><td><b>${esc(landParcelName(f.id))}</b></td><td>${esc(f.area ? f.area + ' m²' : '–')}</td><td>${db.plotLandParcels.filter(r=>r.landParcelId===f.id).map(r=>esc(plotName(r.plotId))).join(', ') || '–'}</td><td>${db.leaseAreas.filter(a=>a.landParcelId===f.id).map(a=>esc(a.name || 'Pachtfläche')).join(', ') || '–'}</td><td>${f.geometry ? esc(`${f.geometry.type} · ${geometryPointCount(f.geometry)} Punkte`) : '–'}</td><td><button onclick="editLandParcel('${f.id}')">Bearbeiten</button></td></tr>`).join('') || '<tr><td colspan="6" class="muted">Noch keine Flurstücke.</td></tr>'}
     </tbody></table></div>`;
 }
 
@@ -552,15 +1468,47 @@ function renderInventoryCategory(sectionId, title, types) {
   const section = document.querySelector(`#${sectionId}`);
   if (!section) return;
   const items = db.inventory.filter(i => types.includes(i.type));
+  const meterView = types.length === 1 && ['Wasserzähler', 'Stromzähler'].includes(types[0]);
+  const meterHeaders = meterView ? '<th>Zählernummer</th><th>Zählstellennummer</th><th>Letzte Ablesung</th>' : '';
+  const addLabel = ({ 'Außentore': 'Außentor', 'Wasserleitungen': 'Wasserleitung', 'Absperrschieber': 'Absperrschieber', 'Wasserzähler': 'Wasserzähler', 'Stromleitungen': 'Stromleitung', 'Unterverteilungen': 'Unterverteilung', 'Stromzähler': 'Stromzähler' })[title] || 'Inventarobjekt';
   section.innerHTML = `
-    <div class="actions"><button class="primary" onclick="editInventory(null, '${esc(types[0])}')">+ ${esc(title.slice(0, -1) || 'Inventarobjekt')}</button></div>
-    <div class="card wide"><table><thead><tr><th>Typ</th><th>BMK / Bezeichnung</th><th>Übergeordnet</th><th>Ort / Geometrie</th><th>Status</th><th>Parzellen</th><th></th></tr></thead><tbody>
+    <div class="actions"><button class="primary" onclick="editInventory(null, '${esc(types[0])}')">+ ${esc(addLabel)}</button></div>
+    <div class="card wide"><table><thead><tr><th>Typ</th><th>BMK / Bezeichnung</th>${meterHeaders}<th>Übergeordnet</th><th>Ort / Geometrie</th><th>Status</th><th>Parzellen</th><th></th></tr></thead><tbody>
     ${items.map(i => {
+      ensureInventoryGeoFields(i);
       const plots = db.plots.filter(p => [p.waterLineId,p.waterValveId,p.waterMeterId,p.electricPanelId,p.electricMeterId].includes(i.id)).map(p=>plotName(p.id));
-      const geom = i.path ? `${pathPointCount(i.path)} Pfadpunkte` : (i.latitude && i.longitude ? `${i.latitude}, ${i.longitude}` : '–');
-      return `<tr><td>${esc(i.type)}</td><td><b>${esc(i.bmk || '–')}</b><br>${esc(i.name || '')}</td><td>${esc(inventoryName(i.parentId))}</td><td>${esc(geom)}</td><td>${esc(i.status || '–')}</td><td>${plots.map(esc).join(', ') || '–'}</td><td><button onclick="editInventory('${i.id}')">Bearbeiten</button></td></tr>`;
-    }).join('') || `<tr><td colspan="7" class="muted">Noch keine ${esc(title)}.</td></tr>`}
+      const geomObj = legacyGeometry(i, 'inventory');
+      const geom = geomObj ? `${geomObj.type} · ${geometryPointCount(geomObj)} Punkt(e)` : '–';
+      const latest = meterView ? meterLatestReading(i.id) : null;
+      const meterCells = meterView ? `<td>${esc(i.meterNumber || '–')}</td><td>${esc(i.meteringPointNumber || '–')}</td><td>${latest ? `${esc(latest.date || '–')} · <b>${esc(latest.value)}</b> ${esc(i.unit || '')}` : '–'}</td>` : '';
+      const meterAction = meterView ? `<button onclick="showMeterReadings('${i.id}')">Ablesungen</button> ` : '';
+      return `<tr><td>${esc(i.type)}</td><td><b>${esc(i.bmk || '–')}</b><br>${esc(i.name || '')}</td>${meterCells}<td>${esc(inventoryName(i.parentId))}</td><td>${esc(geom)}</td><td>${esc(i.status || '–')}</td><td>${plots.map(esc).join(', ') || '–'}</td><td>${meterAction}<button onclick="editInventory('${i.id}')">Bearbeiten</button></td></tr>`;
+    }).join('') || `<tr><td colspan="${meterView ? 10 : 7}" class="muted">Noch keine ${esc(title)}.</td></tr>`}
     </tbody></table></div>`;
+}
+
+function showMeterReadings(meterId) {
+  const meter = byId(db.inventory, meterId);
+  if (!meter || !isMeter(meter)) return;
+  const readings = [...db.meterReadings].filter(r => r.meterId === meterId).sort((a,b) => String(b.date || '').localeCompare(String(a.date || '')));
+  showDialog(`Ablesungen · ${inventoryName(meterId)}`, `<div class="actions"><button class="primary" type="button" onclick="editMeterReading('${meterId}')">+ Zählerstand erfassen</button><button type="button" onclick="editInventory('${meterId}')">Zähler bearbeiten</button></div><div class="table-scroll"><table class="data-table"><thead><tr><th>Datum</th><th>Stand</th><th>Verbrauch</th><th>Art</th><th>Bemerkung</th><th>Foto</th><th></th></tr></thead><tbody>${readings.map(r => { const usage = meterReadingUsage(meterId, r.id); return `<tr><td>${esc(r.date || '–')}</td><td><b>${esc(r.value)}</b> ${esc(meter.unit || '')}</td><td>${usage === null ? '–' : `${esc(usage.toLocaleString('de-DE'))} ${esc(meter.unit || '')}`}</td><td>${esc(r.readingType || 'manuell')}</td><td>${esc(r.note || '–')}</td><td>${r.photoData ? `<a href="${r.photoData}" target="_blank" rel="noopener">Foto</a>` : '–'}</td><td><button type="button" onclick="editMeterReading('${meterId}','${r.id}')">Bearbeiten</button></td></tr>`; }).join('') || '<tr><td colspan="7" class="muted">Noch keine Ablesungen.</td></tr>'}</tbody></table></div>`);
+}
+
+function editMeterReading(meterId, readingId) {
+  const meter = byId(db.inventory, meterId);
+  if (!meter || !isMeter(meter)) return;
+  const r = byId(db.meterReadings, readingId) || { id: '', meterId, date: today(), value: '', readingType: 'manuell', note: '', photoName: '', photoType: '', photoData: '', createdAt: now() };
+  showDialog(r.id ? 'Zählerstand bearbeiten' : 'Zählerstand erfassen', `<form id="fmeterreading" class="formgrid"><div class="full"><b>${esc(inventoryName(meterId))}</b><br><span class="subtle">${esc(meter.meterNumber ? `Zählernummer ${meter.meterNumber}` : '')}${meter.meteringPointNumber ? ` · Zählstelle ${esc(meter.meteringPointNumber)}` : ''}</span></div><label>Ablesedatum<input type="date" name="date" required value="${esc(r.date)}"></label><label>Zählerstand (${esc(meter.unit || 'Einheit')})<input type="number" step="any" name="value" required value="${esc(r.value)}"></label><label>Ableseart<select name="readingType">${['manuell','Jahresablesung','Übergabe','Kontrolle','Einbau','Ausbau'].map(x=>`<option ${x===r.readingType?'selected':''}>${x}</option>`).join('')}</select></label><label class="full">Foto<input type="file" id="meterReadingPhoto" accept="image/*" capture="environment"></label>${r.photoName ? `<div class="full"><span class="badge">Foto vorhanden: ${esc(r.photoName)}</span></div>` : ''}<label class="full">Bemerkung<textarea name="note">${esc(r.note)}</textarea></label><div class="full actions"><button class="primary">Speichern</button><button type="button" onclick="showMeterReadings('${meterId}')">Abbrechen</button></div></form>`);
+  fmeterreading.onsubmit = async e => {
+    e.preventDefault();
+    const f = new FormData(e.target);
+    const o = { id: r.id || uid(), meterId, date: f.get('date'), value: f.get('value'), readingType: f.get('readingType'), note: f.get('note').trim(), photoName: r.photoName || '', photoType: r.photoType || '', photoData: r.photoData || '', createdAt: r.createdAt || now(), updatedAt: now() };
+    const file = document.getElementById('meterReadingPhoto').files[0];
+    if (file) { o.photoName = file.name; o.photoType = file.type; o.photoData = await fileToDataURL(file); }
+    r.id ? Object.assign(r, o) : db.meterReadings.push(o);
+    save();
+    showMeterReadings(meterId);
+  };
 }
 
 function renderLeases() {
@@ -589,6 +1537,7 @@ function contractLinkLabel(r) {
   if (r.targetType === 'Flurstück') return `Flurstück: ${esc(landParcelName(r.targetId))}`;
   if (r.targetType === 'Parzelle') return `Parzelle: ${esc(plotName(r.targetId))}`;
   if (r.targetType === 'Inventar') return `Inventar: ${esc(inventoryName(r.targetId))}`;
+  if (r.targetType === 'Pachtfläche') { const a = byId(db.leaseAreas, r.targetId); return `Pachtfläche: ${esc(a?.name || '–')}`; }
   return esc(r.targetType || '–');
 }
 
@@ -673,26 +1622,49 @@ function editPersonAddress(id) { if (!db.people.length || !db.addresses.length) 
     return;
 } const r = byId(db.personAddresses, id) || { id: '', personId: db.people[0].id, addressId: db.addresses[0].id, type: 'Postanschrift', validFrom: '', validTo: '', note: '' }; showDialog(r.id ? 'Adresszuordnung bearbeiten' : 'Adresse zu Person zuordnen', `<form id="fpa" class="formgrid"><label>Person<select name="personId">${personOptions(r.personId)}</select></label><label>Adresse<select name="addressId">${addressOptions(r.addressId)}</select></label><label>Art<input name="type" value="${esc(r.type)}"></label><label>Gültig von<input type="date" name="validFrom" value="${esc(r.validFrom)}"></label><label>Gültig bis<input type="date" name="validTo" value="${esc(r.validTo)}"></label><label class="full">Notiz<textarea name="note">${esc(r.note)}</textarea></label><div class="full actions"><button class="primary">Speichern</button><button type="button" onclick="dlg.close()">Abbrechen</button></div></form>`); fpa.onsubmit = e => { e.preventDefault(); const f = new FormData(e.target), o = { id: r.id || uid(), personId: f.get('personId'), addressId: f.get('addressId'), type: f.get('type').trim(), validFrom: f.get('validFrom'), validTo: f.get('validTo'), note: f.get('note').trim() }; r.id ? Object.assign(r, o) : db.personAddresses.push(o); save(); dlg.close(); }; }
 function editWay(id) {
-  const w = byId(db.ways, id) || { id: '', name: '', path: '', note: '' };
+  const w = byId(db.ways, id) || { id: '', name: '', path: '', geometry: null, note: '' };
   showDialog(w.id ? 'Weg bearbeiten' : 'Weg anlegen', `<form id="fw" class="formgrid"><label class="full">Bezeichnung<input name="name" required value="${esc(w.name)}" placeholder="z. B. Rosenweg"></label><label class="full">Koordinatenpfad<textarea name="path" placeholder="51.5321, 9.9342
 51.5323, 9.9346">${esc(w.path || '')}</textarea><span class="subtle">${esc(pathHelp())}</span></label><label class="full">Notiz<textarea name="note">${esc(w.note)}</textarea></label><div class="full actions"><button class="primary">Speichern</button><button type="button" onclick="dlg.close()">Abbrechen</button></div></form>`);
-  fw.onsubmit = e => { e.preventDefault(); const f = new FormData(e.target), o = { id: w.id || uid(), name: f.get('name').trim(), path: f.get('path').trim(), note: f.get('note').trim() }; w.id ? Object.assign(w, o) : db.ways.push(o); save(); dlg.close(); };
+  fw.onsubmit = e => { e.preventDefault(); const f = new FormData(e.target), o = { id: w.id || uid(), name: f.get('name').trim(), path: f.get('path').trim(), geometry: w.geometry || null, note: f.get('note').trim() }; w.id ? Object.assign(w, o) : db.ways.push(o); save(); dlg.close(); };
 }
 function editPlot(id) {
-  const p = byId(db.plots, id) || { id: '', number: '', wayId: '', size: '', latitude: '', longitude: '', location: '', note: '', waterAvailable: false, electricityAvailable: false, waterLineId: '', waterValveId: '', waterMeterId: '', electricPanelId: '', electricMeterId: '' };
+  const p = byId(db.plots, id) || { id: '', number: '', wayId: '', size: '', latitude: '', longitude: '', location: '', note: '', waterAvailable: false, electricityAvailable: false, waterLineId: '', waterValveId: '', waterMeterId: '', electricPanelId: '', electricMeterId: '', geometry: null };
   showDialog(p.id ? 'Parzelle bearbeiten' : 'Parzelle anlegen', `<form id="fplot" class="formgrid"><label>Gartennummer<input name="number" required value="${esc(p.number)}"></label><label>Weg<select name="wayId">${wayOptions(p.wayId)}</select></label><label>Größe m²<input type="number" step="0.01" name="size" value="${esc(p.size)}"></label><label>Lage / Zusatzbezeichnung<input name="location" value="${esc(p.location)}"></label><label>Breitengrad<input type="number" step="any" name="latitude" value="${esc(p.latitude)}" placeholder="51.123456"></label><label>Längengrad<input type="number" step="any" name="longitude" value="${esc(p.longitude)}" placeholder="9.123456"></label><fieldset class="full"><legend>Technische Versorgung</legend><div class="formgrid"><label class="checkline"><input type="checkbox" name="waterAvailable" ${p.waterAvailable ? 'checked' : ''}> Wasser vorhanden</label><label class="checkline"><input type="checkbox" name="electricityAvailable" ${p.electricityAvailable ? 'checked' : ''}> Strom vorhanden</label><label>Wasserleitung / Strang<select name="waterLineId">${inventoryOptions(p.waterLineId, ['Wasserleitung', 'Wasserstrang'])}</select></label><label>Schieber<select name="waterValveId">${inventoryOptions(p.waterValveId, ['Schieber'])}</select></label><label>Wasserzähler<select name="waterMeterId">${inventoryOptions(p.waterMeterId, ['Wasserzähler'])}</select></label><label>Unterverteilung<select name="electricPanelId">${inventoryOptions(p.electricPanelId, ['Unterverteilung'])}</select></label><label>Stromzähler<select name="electricMeterId">${inventoryOptions(p.electricMeterId, ['Stromzähler'])}</select></label></div></fieldset><label class="full">Notiz<textarea name="note">${esc(p.note)}</textarea></label><div class="full actions"><button class="primary">Speichern</button><button type="button" onclick="dlg.close()">Abbrechen</button></div></form>`);
-  fplot.onsubmit = e => { e.preventDefault(); const f = new FormData(e.target), o = { id: p.id || uid(), number: f.get('number').trim(), wayId: f.get('wayId'), size: f.get('size'), location: f.get('location').trim(), latitude: f.get('latitude'), longitude: f.get('longitude'), waterAvailable: f.get('waterAvailable') === 'on', electricityAvailable: f.get('electricityAvailable') === 'on', waterLineId: f.get('waterLineId'), waterValveId: f.get('waterValveId'), waterMeterId: f.get('waterMeterId'), electricPanelId: f.get('electricPanelId'), electricMeterId: f.get('electricMeterId'), note: f.get('note').trim() }; p.id ? Object.assign(p, o) : db.plots.push(o); save(); dlg.close(); };
+  fplot.onsubmit = e => { e.preventDefault(); const f = new FormData(e.target), o = { id: p.id || uid(), number: f.get('number').trim(), wayId: f.get('wayId'), size: f.get('size'), location: f.get('location').trim(), latitude: f.get('latitude'), longitude: f.get('longitude'), waterAvailable: f.get('waterAvailable') === 'on', electricityAvailable: f.get('electricityAvailable') === 'on', waterLineId: f.get('waterLineId'), waterValveId: f.get('waterValveId'), waterMeterId: f.get('waterMeterId'), electricPanelId: f.get('electricPanelId'), electricMeterId: f.get('electricMeterId'), geometry: p.geometry || null, note: f.get('note').trim() }; p.id ? Object.assign(p, o) : db.plots.push(o); save(); dlg.close(); };
 }
-function editLandParcel(id) { const f = byId(db.landParcels, id) || { id: '', gemarkung: '', flur: '', number: '', area: '', note: '' }; showDialog(f.id ? 'Flurstück bearbeiten' : 'Flurstück anlegen', `<form id="flp" class="formgrid"><label>Gemarkung<input name="gemarkung" value="${esc(f.gemarkung)}"></label><label>Flur<input name="flur" value="${esc(f.flur)}"></label><label>Flurstücksnummer<input name="number" required value="${esc(f.number)}"></label><label>Fläche m²<input type="number" step="0.01" name="area" value="${esc(f.area)}"></label><label class="full">Notiz<textarea name="note">${esc(f.note)}</textarea></label><div class="full actions"><button class="primary">Speichern</button><button type="button" onclick="dlg.close()">Abbrechen</button></div></form>`); flp.onsubmit = e => { e.preventDefault(); const d = new FormData(e.target), o = { id: f.id || uid(), gemarkung: d.get('gemarkung').trim(), flur: d.get('flur').trim(), number: d.get('number').trim(), area: d.get('area'), note: d.get('note').trim() }; f.id ? Object.assign(f, o) : db.landParcels.push(o); save(); dlg.close(); }; }
+function editLandParcel(id) { const f = byId(db.landParcels, id) || { id: '', gemarkung: '', flur: '', number: '', area: '', geometry: null, note: '' }; showDialog(f.id ? 'Flurstück bearbeiten' : 'Flurstück anlegen', `<form id="flp" class="formgrid"><label>Gemarkung<input name="gemarkung" value="${esc(f.gemarkung)}"></label><label>Flur<input name="flur" value="${esc(f.flur)}"></label><label>Flurstücksnummer<input name="number" required value="${esc(f.number)}"></label><label>Fläche m²<input type="number" step="0.01" name="area" value="${esc(f.area)}"></label><label class="full">Notiz<textarea name="note">${esc(f.note)}</textarea></label><div class="full actions"><button class="primary">Speichern</button><button type="button" onclick="dlg.close()">Abbrechen</button></div></form>`); flp.onsubmit = e => { e.preventDefault(); const d = new FormData(e.target), o = { id: f.id || uid(), gemarkung: d.get('gemarkung').trim(), flur: d.get('flur').trim(), number: d.get('number').trim(), area: d.get('area'), geometry: f.geometry || null, note: d.get('note').trim() }; f.id ? Object.assign(f, o) : db.landParcels.push(o); save(); dlg.close(); }; }
 function editPlotLandParcel(id) { if (!db.plots.length || !db.landParcels.length) {
     alert('Bitte zuerst Parzelle und Flurstück anlegen.');
     return;
 } const r = byId(db.plotLandParcels, id) || { id: '', plotId: db.plots[0].id, landParcelId: db.landParcels[0].id, share: '', note: '' }; showDialog(r.id ? 'Flurstückszuordnung bearbeiten' : 'Flurstück zuordnen', `<form id="fpl" class="formgrid"><label>Parzelle<select name="plotId">${plotOptions(r.plotId)}</select></label><label>Flurstück<select name="landParcelId">${landParcelOptions(r.landParcelId)}</select></label><label>Anteil / Teilfläche<input name="share" value="${esc(r.share)}" placeholder="z. B. vollständig oder 120 m²"></label><label class="full">Notiz<textarea name="note">${esc(r.note)}</textarea></label><div class="full actions"><button class="primary">Speichern</button><button type="button" onclick="dlg.close()">Abbrechen</button></div></form>`); fpl.onsubmit = e => { e.preventDefault(); const f = new FormData(e.target), o = { id: r.id || uid(), plotId: f.get('plotId'), landParcelId: f.get('landParcelId'), share: f.get('share').trim(), note: f.get('note').trim() }; r.id ? Object.assign(r, o) : db.plotLandParcels.push(o); save(); dlg.close(); }; }
+function toggleMeterFields(type) {
+  const fieldset = document.getElementById('meterFields');
+  if (fieldset) fieldset.hidden = !['Wasserzähler', 'Stromzähler'].includes(type);
+}
+
 function editInventory(id, defaultType = 'Schieber') {
   const types = ['Außentor', 'Wasserleitung', 'Wasserstrang', 'Schieber', 'Wasserzähler', 'Wasseranschluss', 'Stromleitung', 'Unterverteilung', 'Stromzähler', 'Sicherung/Abgang', 'Sonstiges'];
-  const i = byId(db.inventory, id) || { id: '', type: defaultType, bmk: '', name: '', parentId: '', status: 'aktiv', latitude: '', longitude: '', path: '', note: '' };
-  showDialog(i.id ? 'Inventarobjekt bearbeiten' : 'Inventarobjekt anlegen', `<form id="finv" class="formgrid"><label>Typ<select name="type">${types.map(t => `<option ${t === i.type ? 'selected' : ''}>${t}</option>`).join('')}</select></label><label>BMK / Kennzeichnung<input name="bmk" value="${esc(i.bmk)}" placeholder="z. B. UV-02 oder W-S3-2"></label><label class="full">Bezeichnung<input name="name" required value="${esc(i.name)}"></label><label>Übergeordnetes Objekt<select name="parentId">${inventoryOptions(i.parentId)}</select></label><label>Status<select name="status">${['aktiv', 'inaktiv', 'defekt', 'stillgelegt', 'geplant'].map(x => `<option ${x === i.status ? 'selected' : ''}>${x}</option>`).join('')}</select></label><label>Breitengrad<input type="number" step="any" name="latitude" value="${esc(i.latitude)}"></label><label>Längengrad<input type="number" step="any" name="longitude" value="${esc(i.longitude)}"></label><label class="full">Koordinatenpfad (für Leitungen)<textarea name="path" placeholder="51.5321, 9.9342\n51.5323, 9.9346">${esc(i.path)}</textarea><span class="subtle">${esc(pathHelp())}</span></label><label class="full">Notiz<textarea name="note">${esc(i.note)}</textarea></label><div class="full actions"><button class="primary">Speichern</button><button type="button" onclick="dlg.close()">Abbrechen</button></div></form>`);
-  finv.onsubmit = e => { e.preventDefault(); const f = new FormData(e.target), o = { id: i.id || uid(), type: f.get('type'), bmk: f.get('bmk').trim(), name: f.get('name').trim(), parentId: f.get('parentId'), status: f.get('status'), latitude: f.get('latitude'), longitude: f.get('longitude'), path: f.get('path').trim(), note: f.get('note').trim() }; if (o.parentId === o.id) o.parentId = ''; i.id ? Object.assign(i, o) : db.inventory.push(o); save(); dlg.close(); };
+  const i = ensureInventoryGeoFields(byId(db.inventory, id) || { id: '', type: defaultType, bmk: '', name: '', parentId: '', status: 'aktiv', latitude: '', longitude: '', path: '', geometry: null, meterScope: '', meterNumber: '', meteringPointNumber: '', unit: '', installedAt: '', removedAt: '', note: '' });
+  const meterFields = `<fieldset id="meterFields" class="full" ${isMeter(i) ? '' : 'hidden'}><legend>Zählerdaten</legend><div class="formgrid"><label>Zählerart<select name="meterScope"><option value="" ${!i.meterScope?'selected':''}>–</option><option value="intern" ${i.meterScope==='intern'?'selected':''}>Interner Vereinszähler</option><option value="Versorger" ${i.meterScope==='Versorger'?'selected':''}>Offizieller Versorger-Zähler</option></select></label><label>Einheit<input name="unit" value="${esc(i.unit)}" placeholder="kWh oder m³"></label><label>Zählernummer<input name="meterNumber" value="${esc(i.meterNumber)}"></label><label>Zählstellennummer<input name="meteringPointNumber" value="${esc(i.meteringPointNumber)}"><span class="subtle">Insbesondere für offizielle Versorger-Zählstellen.</span></label><label>Einbaudatum<input type="date" name="installedAt" value="${esc(i.installedAt)}"></label><label>Ausbaudatum<input type="date" name="removedAt" value="${esc(i.removedAt)}"></label></div></fieldset>`;
+  showDialog(i.id ? 'Inventarobjekt bearbeiten' : 'Inventarobjekt anlegen', `<form id="finv" class="formgrid"><label>Typ<select name="type" onchange="toggleMeterFields(this.value)">${types.map(t => `<option ${t === i.type ? 'selected' : ''}>${t}</option>`).join('')}</select></label><label>BMK / Kennzeichnung<input name="bmk" value="${esc(i.bmk)}" placeholder="z. B. UV-02 oder W-S3-2"></label><label class="full">Bezeichnung<input name="name" required value="${esc(i.name)}"></label><label>Übergeordnetes Objekt<select name="parentId">${inventoryOptions(i.parentId)}</select></label><label>Status<select name="status">${['aktiv', 'inaktiv', 'defekt', 'stillgelegt', 'geplant'].map(x => `<option ${x === i.status ? 'selected' : ''}>${x}</option>`).join('')}</select></label><label>Breitengrad<input type="number" step="any" name="latitude" value="${esc(i.latitude)}"></label><label>Längengrad<input type="number" step="any" name="longitude" value="${esc(i.longitude)}"></label><label class="full">Koordinatenpfad (für Leitungen)<textarea name="path" placeholder="51.5321, 9.9342\n51.5323, 9.9346">${esc(i.path)}</textarea><span class="subtle">${esc(pathHelp())}</span></label>${meterFields}<label class="full">Notiz<textarea name="note">${esc(i.note)}</textarea></label><div class="full actions"><button class="primary">Speichern</button>${isMeter(i) && i.id ? `<button type="button" onclick="showMeterReadings('${i.id}')">Ablesungen</button>` : ''}<button type="button" onclick="dlg.close()">Abbrechen</button></div></form>`);
+  finv.onsubmit = e => {
+    e.preventDefault();
+    const f = new FormData(e.target);
+    const type = f.get('type');
+    const o = {
+      id: i.id || uid(), type, bmk: f.get('bmk').trim(), name: f.get('name').trim(), parentId: f.get('parentId'), status: f.get('status'),
+      latitude: f.get('latitude'), longitude: f.get('longitude'), path: f.get('path').trim(), geometry: i.geometry || null,
+      meterScope: f.get('meterScope'), meterNumber: f.get('meterNumber').trim(), meteringPointNumber: f.get('meteringPointNumber').trim(),
+      unit: f.get('unit').trim() || (type === 'Stromzähler' ? 'kWh' : (type === 'Wasserzähler' ? 'm³' : '')),
+      installedAt: f.get('installedAt'), removedAt: f.get('removedAt'), note: f.get('note').trim()
+    };
+    if (o.parentId === o.id) o.parentId = '';
+    if (o.geometry?.type === 'Point' && (o.latitude || o.longitude)) o.geometry = pointGeometry(o.latitude, o.longitude);
+    if (o.geometry?.type === 'LineString' && o.path) o.geometry = { type: 'LineString', coordinates: parsePath(o.path) };
+    i.id ? Object.assign(i, o) : db.inventory.push(o);
+    save();
+    dlg.close();
+  };
 }
 
 function editLease(id) {
@@ -737,7 +1709,8 @@ function editContractLink(id) {
   const targetOptions = [
     ...db.landParcels.map(x => ({ value: `Flurstück|${x.id}`, label: `Flurstück · ${landParcelName(x.id)}` })),
     ...db.plots.map(x => ({ value: `Parzelle|${x.id}`, label: `Parzelle · ${plotName(x.id)}` })),
-    ...db.inventory.map(x => ({ value: `Inventar|${x.id}`, label: `Inventar · ${inventoryName(x.id)}` }))
+    ...db.inventory.map(x => ({ value: `Inventar|${x.id}`, label: `Inventar · ${inventoryName(x.id)}` })),
+    ...db.leaseAreas.map(x => ({ value: `Pachtfläche|${x.id}`, label: `Pachtfläche · ${x.name || x.id}` }))
   ];
   showDialog(r.id ? 'Vertragszuordnung bearbeiten' : 'Objekt dem Vertrag zuordnen', `<form id="fcl" class="formgrid"><label>Vertrag<select name="contractId">${opts(db.contracts,r.contractId,c=>contractName(c.id))}</select></label><label class="full">Zugeordnetes Objekt<select name="target"><option value="">– keine –</option>${targetOptions.map(x=>`<option value="${esc(x.value)}" ${x.value===current?'selected':''}>${esc(x.label)}</option>`).join('')}</select></label><label class="full">Notiz<textarea name="note">${esc(r.note)}</textarea></label><div class="full actions"><button class="primary">Speichern</button><button type="button" onclick="dlg.close()">Abbrechen</button></div></form>`);
   fcl.onsubmit=e=>{
@@ -803,7 +1776,7 @@ function clearAll() { if (confirm('Wirklich ALLE lokalen Daten einschließlich F
 } }
 function renderBackup() {
   const bytes = new Blob([JSON.stringify(db)]).size;
-  document.querySelector('#backup').innerHTML = `<div class="grid"><div class="card"><h2>Vollsicherung</h2><p>Enthält alle Stammdaten, Mitgliedschaften, Unterpachtverhältnisse, Verträge, Inventar, Vorgänge sowie Fotos und Dokumente.</p><button class="primary" onclick="exportBackup()">Vollsicherung herunterladen</button></div><div class="card"><h2>Wiederherstellen</h2><p>Ältere Sicherungen werden beim Import automatisch auf das aktuelle Schema migriert.</p><input type="file" accept="application/json,.json" onchange="importBackup(this)"></div><div class="card"><h2>CSV</h2><p>Tabellarischer Zusatzexport der Vorgänge.</p><button onclick="exportCasesCSV()">Vorgänge als CSV</button></div><div class="card"><h2>Speicher</h2><p>Aktueller Datenbestand ca. <b>${(bytes / 1024 / 1024).toFixed(2)} MB</b>.</p></div></div><div class="card" style="margin-top:14px"><h2>Version</h2><p><b>${APP_VERSION}</b> · Schema ${db.schema}. Neu: gruppierte Fachnavigation, Mitgliedschaften, Unterpachtverhältnisse und allgemeine Verträge.</p><button class="danger" onclick="clearAll()">Alle lokalen Daten löschen</button></div>`;
+  document.querySelector('#backup').innerHTML = `<div class="grid"><div class="card"><h2>Vollsicherung</h2><p>Enthält alle Stammdaten, Mitgliedschaften, Unterpachtverhältnisse, Verträge, Inventar, Vorgänge sowie Fotos und Dokumente.</p><button class="primary" onclick="exportBackup()">Vollsicherung herunterladen</button></div><div class="card"><h2>Wiederherstellen</h2><p>Ältere Sicherungen werden beim Import automatisch auf das aktuelle Schema migriert.</p><input type="file" accept="application/json,.json" onchange="importBackup(this)"></div><div class="card"><h2>CSV</h2><p>Tabellarischer Zusatzexport der Vorgänge.</p><button onclick="exportCasesCSV()">Vorgänge als CSV</button></div><div class="card"><h2>Speicher</h2><p>Aktueller Datenbestand ca. <b>${(bytes / 1024 / 1024).toFixed(2)} MB</b>.</p></div></div><div class="card" style="margin-top:14px"><h2>Version</h2><p><b>${APP_VERSION}</b> · Schema ${db.schema}. Neu: Kartenansicht mit Geometrieeditor, Pachtflächen sowie Zählerstände und Zählstelleninformationen.</p><button class="danger" onclick="clearAll()">Alle lokalen Daten löschen</button></div>`;
 }
 render();
 save();

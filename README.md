@@ -1,4 +1,4 @@
-# Gartenakte 0.8.2
+# Gartenakte 0.9.5
 
 Portable Vereinsverwaltung als Progressive Web App (PWA) für GitHub Pages.
 
@@ -10,29 +10,76 @@ Die Dateien dieses Ordners kommen direkt in die oberste Ebene des Repositories. 
 
 Der Freigabeparameter ist nur eine einfache Zugangshürde und kein echter Zugriffsschutz. Vereinsdaten werden nicht in GitHub gespeichert, sondern lokal im Browserprofil des jeweiligen Geräts.
 
-## Neu in 0.6.0
+## Neu in 0.9.5
 
-- Inventar für Wasser- und Strominfrastruktur
-- Wasserleitungen, Wasserstränge, Schieber, Wasserzähler und Wasseranschlüsse
-- Stromleitungen, Unterverteilungen, Stromzähler sowie Sicherungen/Abgänge
-- BMK/Kennzeichnung und Hierarchie zwischen Inventarobjekten
-- Punktkoordinaten für technische Objekte
-- Koordinatenpfade für Leitungen
-- Koordinatenpfade für Wege
-- Strom-/Wasserversorgung und technische Zuordnung je Parzelle
-- automatische Migration bestehender 0.5.x-Daten auf Schema 3
+- OSM-Außentore auf dem äußeren Koloniepolygon werden jetzt zusätzlich zu Toren innerhalb der Anlage erkannt.
+- Die Erkennung prüft dafür auch, ob ein `barrier=gate`-Node Bestandteil eines äußeren Grenz-Ways der Kolonie ist.
+- Der mitgelieferte Rosengarten-Datensatz enthält dadurch **8 statt 5 Außentore**.
+- Importdialog und Dokumentation sprechen entsprechend von Außentoren „innerhalb oder auf der Koloniegrenze“.
 
-## Koordinatenpfade
+## Neu in 0.9.4
 
-Ein Pfad wird aktuell als eine Koordinate pro Zeile erfasst:
+- „Auf vorhandene Daten zoomen“ berechnet die Kartenausdehnung jetzt robust aus allen gespeicherten Fachdaten.
+- Berücksichtigt werden Parzellen, Flurstücke, Pachtflächen, Wege, Inventargeometrien und die gespeicherte Koloniegrenze – unabhängig von der aktuellen Layer-Sichtbarkeit.
+- `Point`, `MultiPoint`, `LineString`, `MultiLineString`, `Polygon`, `MultiPolygon` und GeometryCollections werden bei der Bounds-Berechnung unterstützt.
+- Ein einzelner Punkt wird mit einem sinnvollen Zoomlevel angezeigt; ohne Geometriedaten erscheint eine verständliche Meldung.
+- Externe OSM-Basiskartendaten fließen nicht in die Bounds-Berechnung ein.
 
-```text
-51.532100, 9.934200
-51.532250, 9.934500
-51.532420, 9.934850
-```
+## Neu in 0.9.3
 
-Diese Struktur ist als Grundlage für eine spätere Kartenansicht gedacht.
+- Karten-Bedienelemente vollständig wieder sichtbar und erreichbar.
+- Kompakte Toolbar direkt oberhalb der Karte mit drei Funktionszeilen.
+- Zeile 1: Kartenebenen inklusive OSM-Referenz.
+- Zeile 2: Objektart, Objekt, Punkt/Linie/Polygon, Punkt zurück sowie Speichern/Abbrechen.
+- Zeile 3: Zoom, Pachtfläche und OSM-Importaktionen.
+- Import- und Zeichenstatus bleiben als kleine Metainformation unmittelbar vor der Karte erhalten.
+- Alle Kartenfunktionen aus 0.9.1 bleiben erhalten, ohne den alten großen Formularblock wieder einzuführen.
+
+## Neu in 0.9.1
+
+- OSM-Importdialog kompakter und responsiver aufgebaut.
+- Importkennzahlen klar gruppiert, Importoptionen als unmittelbare Checkbox-Liste dargestellt.
+- Hinweis auf fehlende OSM-Referenzen und Quellenangabe visuell sauberer eingeordnet.
+
+## Neu in 0.9.0
+
+- Kartenansicht für Anlage und technische Infrastruktur
+- OpenStreetMap als Basiskarte
+- ein-/ausblendbare Ebenen für Parzellen, Flurstücke, Pachtflächen, Wege, Wasser, Strom und Inventar
+- Karteneditor für Punkt, Linie und Polygon
+- Geometrien können direkt mit Parzellen, Flurstücken, Pachtflächen, Wegen und Inventarobjekten verknüpft werden
+- Pachtflächen als eigenes Objekt, damit bei teilweise verpachteten Flurstücken amtliche Flurstücksfläche und tatsächliche Vertragsfläche getrennt bleiben
+- Wasser- und Stromzähler getrennt in der Navigation
+- Zählernummer und Zählstellennummer für Versorger-Zähler
+- historische Zählerstände mit Datum, Ableseart, optionalem Foto und Verbrauch zur vorherigen Ablesung
+- automatisches Upgrade vorhandener Schema-4-Daten auf Schema 5
+
+## Karte und Offline-Nutzung
+
+Die Anwendung selbst bleibt als PWA offline startfähig. Die OpenStreetMap-Basiskarte und die Leaflet-Kartenbibliothek werden online geladen. Bereits gespeicherte Vereinsdaten und Geometrien bleiben lokal in der Gartenakte; ohne Internet steht lediglich die externe Basiskarte nicht zur Verfügung.
+
+## Geometrien
+
+0.9.0 verwendet für neu über die Karte erfasste Geometrien GeoJSON-nahe Objekte:
+
+- `Point` für punktförmige Objekte
+- `LineString` für Wege und Leitungen
+- `Polygon` für Flurstücke, Pachtflächen und spätere Parzellengrenzen
+
+Ältere Koordinatenfelder und Koordinatenpfade bleiben kompatibel und werden weiterhin auf der Karte dargestellt.
+
+## Zähler und Ablesungen
+
+Für Wasser- und Stromzähler können zusätzlich gepflegt werden:
+
+- interner Vereinszähler oder offizieller Versorger-Zähler
+- Zählernummer
+- Zählstellennummer
+- Einheit (`m³`, `kWh` usw.)
+- Einbau- und Ausbaudatum
+- beliebig viele Ablesungen mit Datum und Zählerstand
+
+Ein Zählerwechsel soll über einen neuen Zählerdatensatz abgebildet werden, damit die Historie erhalten bleibt.
 
 ## Installation
 
@@ -40,23 +87,21 @@ Diese Struktur ist als Grundlage für eine spätere Kartenansicht gedacht.
 - Android/Chrome/Edge: „App installieren“ oder „Zum Startbildschirm hinzufügen“.
 - Desktop-Chromium-Browser: Installationssymbol bzw. „App installieren“.
 
-## Offline
-
-Nach dem ersten erfolgreichen Laden wird die App-Shell durch `sw.js` zwischengespeichert und kann offline starten.
-
 ## Datensicherung
 
-Die lokale Speicherung ersetzt kein Backup. Regelmäßig unter „Sicherung/Export“ eine Vollsicherung exportieren.
+Die lokale Speicherung ersetzt kein Backup. Regelmäßig unter „Import & Export“ eine Vollsicherung exportieren.
 
-Siehe auch [`ROADMAP.md`](ROADMAP.md).
+## Projekt-Dokumentation
+
+- `ROADMAP.md` – geplante Weiterentwicklung
+- `CHANGELOG.md` – Änderungen je Version
+- `docs/IMPORT_EXPORT.md` im Wurzelverzeichnis des ZIP-Pakets – aktuelles Import-/Exportformat
 
 
-## Version 0.8.2
+## Karte & OSM-Import (0.9.0)
 
-- Parzellenübersicht unter 768 px als mobile Kartenansicht
-- Suche nach Parzellenname, Nummer, Weg oder Lage
-- Filter nach Weg und technischer Versorgung
-- Sortierung nach Nummer oder Weg
-- Desktop-Tabellenansicht unverändert ab 768 px
-- Bearbeiten-Aktion auf Smartphones vollständig sichtbar
-- keine horizontale Parzellentabelle als Standardansicht auf Smartphones
+Unter **Anlage & Inventar → Karte** können Punkt-, Linien- und Polygongeometrien erfasst werden. Der mitgelieferte OSM-Export liegt unter `data/map.osm`; eine kompakte Importquelle liegt unter `data/rosengarten-osm.json`.
+
+Der OSM-Import ordnet Parzellen über ihre `ref`-Nummer zu, übernimmt die Wege der Anlage einschließlich Reinhäuser Landstraße und kann Außentore innerhalb oder auf der Koloniegrenze anlegen. OpenStreetMap-Daten ersetzen keine amtlichen Flurstücksdaten.
+
+Quelle der OSM-Daten: © OpenStreetMap-Mitwirkende, ODbL 1.0.

@@ -1,302 +1,149 @@
 # ROADMAP – Gartenakte
 
-Aktueller Stand: **0.8.2**
+Aktueller Stand: **0.9.5**
 
-## 0.7.0 – Struktur, Mitgliedschaften & Verträge ✅ umgesetzt
+## 0.9.0 – Karte & Geodaten ✅ umgesetzt
 
-Ziel: Fachliche Grundstruktur der Anwendung neu ordnen und Mitgliedschaften, Unterpacht sowie allgemeine Verträge sauber voneinander trennen.
+- Kartenansicht mit OpenStreetMap
+- Ebenen für Parzellen, Flurstücke, Pachtflächen, Wege, Wasser, Strom und Inventar
+- Zeichenwerkzeuge für Punkt, Linie und Polygon
+- Verknüpfung von Geometrien mit Fachobjekten
+- Flurstücke und tatsächlich verpachtete Pachtflächen getrennt modelliert
+- Wasser- und Stromzähler getrennt geführt
+- Zählernummer und Zählstellennummer
+- historische Ablesungen mit Datum und Verbrauchsberechnung
+- OSM-Import mit Vorschau und Zuordnung von Parzellen, Wegen und Außentoren
+- mitgelieferter OSM-Referenzdatensatz für die Gartenkolonie Rosengarten
+
+Der ursprünglich als 0.8.6 geplante Ausbau „Zählstellen & Ablesungen“ wurde in 0.9.0 integriert.
+
+---
+
+## 0.10.0 – Kontakte & Verträge
 
 ### Navigation
 
-- Übersicht
-- Vorgänge
-- Mitglieder & Personen
-  - Personen
-  - Adressen
-  - Mitgliedschaften
-  - Unterpachtverhältnisse
+- Kontakte
 - Verträge
-  - Pachtverträge
-  - Stromverträge
-  - Wasserverträge
-  - Versicherungen
-  - sonstige Verträge
-- Anlage & Inventar
-  - Parzellen
-  - Flurstücke
-  - Wege
-  - Außentore
-  - Unterverteilungen
-  - Wasserschieber
-  - Zähler
-  - Stromleitungen
-  - Wasserleitungen
-- System
-  - Import & Export
-  - App installieren
-  - QR-Code / Link teilen
 
-### Mitgliedschaften
+Ein Kontakt ist entweder eine natürliche Person oder eine Organisation. Rollen wie Vertragspartner, Dienstleister, Versorger, Steuerberater, Rechtsanwalt/Kanzlei, Gerichtsvollzieher oder Entsorgungsbetrieb sind Eigenschaften eines Kontakts und keine eigenen Stammdatentypen.
 
-Mitgliedschaft wird als eigenes Objekt geführt und von Person sowie Unterpachtverhältnis getrennt.
-
-Vorgesehene Mitgliedsarten:
-
-- Vollmitglied
-- Mitglied
-- Mitglied auf Probe
-- Familien-/Ehegattenmitglied
-
-Mitgliedschaften erhalten:
-
-- Gültig-von
-- Gültig-bis
-- Status
-- Mitgliedsart
-- Bemerkungen
-- Historie von Änderungen der Mitgliedsart
-
-Eine Person kann im Laufe der Zeit verschiedene Mitgliedsarten haben.
-
-Die Mitgliedsart wird **nicht** automatisch aus einer Parzellenzuordnung abgeleitet.
-
-### Unterpachtverhältnisse
-
-Unterpachtverhältnisse werden getrennt von der Mitgliedschaft gespeichert.
-
-Beziehung:
-
-**Person ↔ Unterpachtverhältnis ↔ Parzelle**
-
-Je Unterpachtverhältnis:
-
-- Beginn
-- Ende
-- Status
-- Vertragsnummer
-- Vertragsdokument
-- Bemerkungen
-
-Eine Person kann gleichzeitig **mehrere Parzellen** bzw. mehrere aktive Unterpachtverhältnisse besitzen.
-
-### Verträge
-
-Verträge werden als allgemeines Vertragsobjekt geführt.
-
-Mögliche Vertragsarten:
-
-- Pachtvertrag
-- Stromvertrag
-- Wasservertrag
-- Versicherung
-- Wartungsvertrag
-- Dienstleistungsvertrag
-- sonstiger Vertrag
-
-Je Vertrag:
-
-- Vertragspartner
-- Vertragsart
-- Vertragsnummer
-- Beginn
-- Ende
-- Kündigungsfrist
-- Status
-- Dokumente
-- Bemerkungen
-- Verknüpfung zu Inventarobjekten, Flurstücken oder anderen relevanten Objekten
-
-### Anlage & Inventar
-
-Flurstücke werden als Anlagen-/Inventarobjekte behandelt und nicht als Vertrag.
-
-Verträge können sich auf ein oder mehrere Flurstücke beziehen.
-
-Bestehende technische Inventarobjekte bleiben erhalten und werden in die neue Navigationsstruktur einsortiert.
+Verträge referenzieren vorhandene Kontakte und können mit Flurstücken, Pachtflächen und Inventarobjekten verknüpft werden.
 
 ---
 
-## 0.8.0 – Mobile Parzellenübersicht ✅ umgesetzt
+## 0.11.0 – Mitglieder & Datenschutz
 
-Ziel: Die Parzellenübersicht auf Smartphones auf schnelles Finden und Bearbeiten einzelner Gärten ausrichten, ohne die Desktop-Tabelle zu verändern.
-
-- Desktop ab 768 px: Tabellenansicht
-- Smartphone unter 768 px: Kartenansicht
-- Suche nach Parzelle, Nummer, Weg oder Lage
-- Filter nach Weg
-- Filter nach Strom-/Wasserversorgung
-- Sortierung nach Nummer oder Weg
-- kompakte Label-Wert-Darstellung
-- vollständig sichtbare Bearbeiten-Aktion
-- leere optionale Angaben werden in den Karten reduziert bzw. ausgeblendet
-
----
-
-## 0.9.0 – Mitglieder & Datenschutz
-
-Ziel: Personenbezogene und sensible Mitgliedsdaten getrennt von allgemeinen Vereins-, Anlagen- und Vorgangsdaten behandeln.
-
-- separater Mitgliederdatenbereich
-- separater Mitglieder-Import
-- separater Mitglieder-Export
-- separate Mitgliederdatensicherung
-- allgemeine Sicherung ohne sensible Mitgliederdaten
-- interne Personen-ID als Verbindung zur übrigen Gartenakte
+- sensible Mitgliederdaten getrennt von allgemeinen Anlagendaten
+- separater Import/Export und separate Sicherung
 - Geburtsdatum
 - Eintrittsdatum
 - Austrittsdatum
-- Datenschutz-/Exportregeln
+- allgemeine Sicherung wahlweise ohne sensible Mitgliederdaten
 
 ---
 
-## 0.10.0 – Jubiläen & Kalender
+## 0.12.0 – Vereinsfunktionen
 
-Ziel: Geburtstage und Vereinsjubiläen automatisch berechnen und frühzeitig anzeigen.
+- frei definierbare Funktionen wie Vorsitz, Schriftführung, Kasse, Wegewart, Zeugwart, Hauswart, Festausschuss, Wasserwart, Elektrowart
+- Rang/Stufe wie 1., 2. oder stellvertretend
+- Gültigkeitszeiträume
+- Freistellung von Arbeitsstunden ganz oder teilweise
+- Kennzeichnung einer möglichen Aufwandsentschädigung ohne Finanzbuchung
 
-- konfigurierbare runde Geburtstage
-- konfigurierbare Vereinsjubiläen
-- frei definierbare Schwellen, z. B. 50. Geburtstag oder 25 Jahre Mitgliedschaft
-- einstellbarer Vorlauf
-- frei wählbarer Datumsbereich
-- Erinnerungsstatus
-- Übersicht anstehender Ehrungen
+---
+
+## 0.13.0 – Arbeitsstunden
+
+- Sollstunden je Jahr
+- Stundensatz für nicht geleistete Stunden
+- geleistete Arbeitsstunden je Mitglied
+- Anrechnung der Jahreshauptversammlung mit konfigurierbarer Stundenanzahl
+- Freistellungen über Vereinsfunktionen
+- Mehrleistung und Gutschriften
+
+---
+
+## 0.14.0 – Jubiläen & Kalender
+
+- runde Geburtstage
+- Vereinsjubiläen
+- konfigurierbare Schwellen
+- frei definierbarer Vorlauf
+- Erinnerungen
 - Kalenderansicht
-- ICS-Export für Apple Kalender, Outlook und andere Kalenderprogramme
+- ICS-Export
 
 ---
 
-## 0.11.0 – Karte & Geodaten
+## 0.15.0 – Vorgänge professionalisieren
 
-Ziel: räumliche Vereins- und Infrastrukturdaten gemeinsam darstellen.
-
-- Kartenansicht
-- Ebenen für Parzellen
-- Flurstücke
-- Wege
-- Wasser
-- Strom
-- Schieber
-- Unterverteilungen
-- Zähler
-- Außentore
-- Leitungsverläufe
-- Auswahl eines Objekts direkt aus der Karte
-- Anzeige betroffener Parzellen bei Schiebern oder Unterverteilungen
-- spätere optionale Parzellengrenzen als Polygon
-
-Bestehende Geodatenmodelle:
-
-- Punktkoordinaten für technische Objekte
-- LineString/Koordinatenpfad für Wege und Leitungen
-
----
-
-## 0.12.0 – Vorgänge professionalisieren
-
-Ziel: aus der bisherigen Vorgangsverwaltung ein belastbares Fallmanagement machen.
-
-- Vorgangsvorlagen
-- Kategorien
+- Vorgangsvorlagen und Kategorien
 - Eskalationsstufen
-- Fristen
-- Wiedervorlagen
-- Verantwortungswechsel
-- historische Verantwortungszuordnung
-- Kostenübernahme
-- Forderung gegen Personen
-- Verknüpfung mit Parzellen
-- Verknüpfung mit Inventarobjekten
-- Verknüpfung mit Verträgen
-- Vorlagen für Hinweise, Mahnungen und Abmahnungen
+- Fristen und Wiedervorlagen
+- Verantwortungswechsel und Historie
+- Kostenübernahme/Forderungen
+- Verknüpfungen zu Personen, Parzellen, Inventar und Verträgen
 
 ---
 
-## 0.13.0 – Dokumente & Schriftverkehr
+## 0.16.0 – Dokumente & Schriftverkehr
 
 - Vorlagenverwaltung
 - PDF-Erzeugung
 - Einzel- und Serienschreiben
 - Dokumenthistorie
-- Anhänge
-- Zuordnung zu Personen
-- Zuordnung zu Parzellen
-- Zuordnung zu Vorgängen
-- Zuordnung zu Verträgen
+- Anhänge und Zuordnungen
 
 ---
 
-## 0.14.0 – Datenpflege & Import
+## 0.17.0 – Datenpflege & Import
 
-- ergänzender Stammdatenimport ohne Überschreiben des gesamten Bestands
+- ergänzender Merge-Import
 - Dublettenprüfung
-- CSV-Import
-- JSON-Import
+- CSV-/JSON-Import
 - Massenänderungen
-- Plausibilitätsprüfungen
-- Importvorschau
-- Konfliktbehandlung
+- Importvorschau und Konfliktbehandlung
 
 ---
 
-## 0.15.0 – Sicherheit & Benutzerkonzept
+## 0.18.0 – Benutzer, Rollen & Sicherheit
 
-Falls die Anwendung später nicht mehr nur lokal auf einem einzelnen Gerät genutzt wird:
-
-- Benutzerrollen
-- Rechte
-- lokaler Sperrbildschirm / PIN
-- getrennte sensible Bereiche
+- Benutzerkonten
+- rollenbasiertes Berechtigungsmodell
+- getrennte Rechte für sensible und fachliche Bereiche
 - Änderungsprotokoll
+- Sitzungs- und Anmeldesicherheit
 - verschlüsselte Sicherungen
-- feinere Zugriffsrechte für Mitgliederdaten
 
 ---
 
-## 0.16.0 – Synchronisation & Mehrgerätebetrieb
-
-Nur falls tatsächlich benötigt:
+## 0.19.0 – Synchronisation & Mehrgerätebetrieb
 
 - gemeinsamer Datenbestand
-- Synchronisation
-- Konfliktbehandlung
-- Server oder verschlüsselte Cloud
-- Geräteverwaltung
 - Offline-/Online-Synchronisation
+- Konfliktbehandlung
+- Geräteverwaltung
+- Server/Backend
+- setzt das Rollenmodell aus 0.18.0 voraus
 
 ---
 
-## 0.17.0 – Auswertungen
+## 0.20.0 – Auswertungen
 
-- offene Vorgänge
-- Fristen
-- häufige Mängel
-- Versorgung je Parzelle
-- Inventarstatus
+- Vorgänge und Fristen
+- Versorgung und Inventar
+- Zählerstände und Verbrauch
+- fehlende Ablesungen
 - Vertragsfristen
-- Mitgliedschaftsübersichten
+- Mitgliedschaften, Vereinsfunktionen und Arbeitsstunden
 - Jubiläen
 - Unterpachtverhältnisse
-- Export für Vorstandssitzungen
 
 ---
 
-# Ziel 1.0.0
+## Später – Finanzen / Kassenbuch
 
-**1.0.0** wird erst vergeben, wenn die zentralen Bereiche stabil und gemeinsam nutzbar sind:
+Erst nach stabilem Mehrbenutzer-, Rollen- und Synchronisationsmodell.
 
-- Personen
-- Mitgliedschaften
-- Adressen
-- Unterpachtverhältnisse
-- Parzellen
-- Flurstücke
-- Verträge
-- Vorgänge
-- Fotos und Dokumente
-- Inventar
-- Geodaten / Kartenbezug
-- getrennte Mitgliederdaten
-- Backup und Wiederherstellung
-- Smartphone- und PWA-Nutzung
-
-1.0.0 soll eine belastbare produktive Vereinsverwaltung darstellen und nicht nur einen funktionierenden Prototypen.
+Mögliche Themen: Kassenbuch, Einnahmen/Ausgaben, Forderungen, Ersatzbeträge für Arbeitsstunden, Aufwandsentschädigungen, Gutschriften und Belegverwaltung.

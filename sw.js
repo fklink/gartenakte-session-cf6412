@@ -1,6 +1,6 @@
 'use strict';
 
-const CACHE_NAME = 'gartenakte-v0.8.2';
+const CACHE_NAME = 'gartenakte-v0.9.5-osm-boundary-gates';
 const APP_SHELL = [
   './index.html?share=b11e91',
   './style.css',
@@ -11,7 +11,8 @@ const APP_SHELL = [
   './404.html',
   './icons/icon-192.png',
   './icons/icon-512.png',
-  './icons/apple-touch-icon.png'
+  './icons/apple-touch-icon.png',
+  './data/rosengarten-osm.json'
 ];
 
 self.addEventListener('install', event => {
